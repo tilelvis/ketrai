@@ -49,7 +49,7 @@ const prompt = ai.definePrompt({
 * Item description & value: {{{productDetails}}}
 * Evidence (photos, notes): {{#if damagePhotoDataUri}}{{media url=damagePhotoDataUri}}{{else}}No photo provided{{/if}}
 
-Format the claim in clear, structured text and JSON.`,
+Format the claim in clear, structured text and JSON. The JSON output should be enclosed in a \`\`\`json... \`\`\` block.`,
 });
 
 const automatedInsuranceClaimDraftFlow = ai.defineFlow(
@@ -60,6 +60,17 @@ const automatedInsuranceClaimDraftFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      throw new Error('No output from prompt');
+    }
+
+    // Extract JSON from the markdown block
+    const jsonMatch = output.claimDraftJson.match(/```json\n([\s\S]*)\n```/);
+    const claimDraftJson = jsonMatch ? jsonMatch[1] : output.claimDraftJson;
+
+    return {
+      ...output,
+      claimDraftJson,
+    };
   }
 );

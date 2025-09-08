@@ -56,6 +56,16 @@ export function AutomatedClaimForm() {
     }
   }
 
+  const renderJson = () => {
+    if (!result?.claimDraftJson) return null;
+    try {
+      return JSON.stringify(JSON.parse(result.claimDraftJson), null, 2);
+    } catch (e) {
+      // If JSON is invalid, just show the raw string.
+      return result.claimDraftJson;
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Form {...form}>
@@ -107,7 +117,7 @@ export function AutomatedClaimForm() {
             <div>
               <p className="font-semibold mb-2">Claim JSON</p>
               <pre className="rounded-md border bg-card p-3 text-xs overflow-x-auto">
-                <code>{JSON.stringify(JSON.parse(result.claimDraftJson), null, 2)}</code>
+                <code>{renderJson()}</code>
               </pre>
             </div>
           </CardContent>
