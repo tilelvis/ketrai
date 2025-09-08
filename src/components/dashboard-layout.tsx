@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import {
   SidebarProvider,
   Sidebar,
@@ -60,10 +61,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton href={item.href} isActive={pathname === item.href}>
-                  <item.icon />
-                  {item.label}
-                </SidebarMenuButton>
+                <Link href={item.href} passHref legacyBehavior>
+                  <SidebarMenuButton asChild isActive={pathname === item.href}>
+                    <span>
+                      <item.icon />
+                      {item.label}
+                    </span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
