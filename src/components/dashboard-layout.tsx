@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
@@ -13,9 +16,7 @@ import {
 } from '@/components/ui/sidebar';
 import {
   Bell,
-  BotMessageSquare,
   Home,
-  SlidersHorizontal,
   Route,
   FilePenLine,
   ShieldAlert,
@@ -37,6 +38,15 @@ type DashboardLayoutProps = {
 };
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const pathname = usePathname();
+
+  const menuItems = [
+    { href: "/", icon: Home, label: "Dashboard" },
+    { href: "/smart-dispatch", icon: Route, label: "Smart Dispatch" },
+    { href: "/automated-claim", icon: FilePenLine, label: "Automated Claim" },
+    { href: "/risk-visibility", icon: ShieldAlert, label: "Risk Visibility" },
+  ];
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -48,42 +58,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton href="/" isActive>
-                <Home />
-                Dashboard
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton href="#">
-                <BotMessageSquare />
-                Flows
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton href="/smart-dispatch">
-                <Route />
-                Smart Dispatch
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton href="/automated-claim">
-                <FilePenLine />
-                Automated Claim
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton href="/risk-visibility">
-                <ShieldAlert />
-                Risk Visibility
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton href="#">
-                <SlidersHorizontal />
-                Settings
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {menuItems.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton href={item.href} isActive={pathname === item.href}>
+                  <item.icon />
+                  {item.label}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
@@ -103,7 +85,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <header className="flex h-14 items-center justify-between gap-4 border-b bg-card/50 px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h2 className="text-lg font-semibold font-headline">Dashboard</h2>
+            <h2 className="text-lg font-semibold font-headline">{menuItems.find(item => item.href === pathname)?.label || 'Dashboard'}</h2>
           </div>
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon">

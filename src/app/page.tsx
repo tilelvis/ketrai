@@ -6,9 +6,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Timer } from "lucide-react";
+import { Timer, Route, FilePenLine, ShieldAlert } from "lucide-react";
 import { ProactiveEtaForm } from "@/components/forms/proactive-eta-form";
 import { Separator } from "@/components/ui/separator";
+import { SmartDispatchForm } from "@/components/forms/smart-dispatch-form";
+import { AutomatedClaimForm } from "@/components/forms/automated-claim-form";
+import { RiskVisibilityReport } from "@/components/forms/risk-visibility-report";
 
 export default function Home() {
   return (
@@ -32,6 +35,42 @@ export default function Home() {
                 Recalculate ETAs based on real-time traffic and weather data.
               </CardDescription>
               <ProactiveEtaForm />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium font-headline">Smart Dispatch Assessor</CardTitle>
+              <Route className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">
+                Analyze route risks to find the optimal and safest path.
+              </CardDescription>
+              <SmartDispatchForm />
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium font-headline">Automated Insurance Claim</CardTitle>
+              <FilePenLine className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">
+                Auto-draft insurance claims for damaged or lost packages.
+              </CardDescription>
+              <AutomatedClaimForm />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium font-headline">Cross-Carrier Risk Visibility</CardTitle>
+              <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">
+                Aggregate shipment data to identify and report on supply chain risks.
+              </CardDescription>
+              <RiskVisibilityReport />
             </CardContent>
           </Card>
         </div>
