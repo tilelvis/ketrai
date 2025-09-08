@@ -6,35 +6,33 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Timer } from "lucide-react";
-import { ProactiveEtaForm } from "@/components/forms/proactive-eta-form";
+import { FilePenLine } from "lucide-react";
+import { AutomatedClaimForm } from "@/components/forms/automated-claim-form";
 import { Separator } from "@/components/ui/separator";
 
-export default function Home() {
+export default function AutomatedClaimPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight font-headline">AI-Powered Workflows</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-headline">Automated Insurance Claim</h1>
             <p className="text-muted-foreground">
-                Interact with your Genkit flows for supply chain orchestration.
+                Auto-draft insurance claims for damaged or lost packages.
             </p>
         </div>
         <Separator />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="col-span-1">
+        <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium font-headline">Proactive ETA Calculator</CardTitle>
-              <Timer className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-lg font-medium font-headline">Automated Insurance Claim</CardTitle>
+              <FilePenLine className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <CardDescription className="mb-4">
-                Recalculate ETAs based on real-time traffic and weather data.
+                Auto-draft insurance claims for damaged or lost packages.
               </CardDescription>
-              <ProactiveEtaForm />
+              <AutomatedClaimForm />
             </CardContent>
           </Card>
-        </div>
       </div>
     </DashboardLayout>
   );

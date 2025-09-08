@@ -16,6 +16,9 @@ import {
   BotMessageSquare,
   Home,
   SlidersHorizontal,
+  Route,
+  FilePenLine,
+  ShieldAlert,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -46,7 +49,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" isActive>
+              <SidebarMenuButton href="/" isActive>
                 <Home />
                 Dashboard
               </SidebarMenuButton>
@@ -55,6 +58,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <SidebarMenuButton href="#">
                 <BotMessageSquare />
                 Flows
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton href="/smart-dispatch">
+                <Route />
+                Smart Dispatch
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton href="/automated-claim">
+                <FilePenLine />
+                Automated Claim
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton href="/risk-visibility">
+                <ShieldAlert />
+                Risk Visibility
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
