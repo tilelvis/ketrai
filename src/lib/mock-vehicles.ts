@@ -1,6 +1,6 @@
 
 import { db } from "./firebase";
-import { collection, writeBatch, Timestamp } from "firebase/firestore";
+import { collection, writeBatch, Timestamp, doc } from "firebase/firestore";
 import type { Vehicle } from "@/types/vehicle";
 
 // Mock data based on locations in Kenya
