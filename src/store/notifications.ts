@@ -1,4 +1,5 @@
 
+
 import { create } from "zustand";
 import { db } from "@/lib/firebase";
 import {
@@ -10,6 +11,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  writeBatch,
 } from "firebase/firestore";
 
 export type Notification = {
@@ -52,11 +54,20 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   clear: async () => {
-    // In a real app, this should be a batched write or a Cloud Function.
-    // For this demo, we'll clear them one by one.
-    console.warn("Clearing all notifications from Firestore.");
     const { notifications } = get();
-    await Promise.all(notifications.map(n => deleteDoc(doc(db, "notifications", n.id))));
+    if (notifications.length === 0) return;
+
+    const batch = writeBatch(db);
+    notifications.forEach((n) => {
+      const docRef = doc(db, "notifications", n.id);
+      batch.delete(docRef);
+    });
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error("Error clearing notifications with a batch write:", error);
+    }
   },
 
   subscribe: () => {
