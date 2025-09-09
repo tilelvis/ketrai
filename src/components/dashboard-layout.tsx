@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons";
 import { aiFlows } from "@/ai/flowRegistry";
-import { Home } from "lucide-react";
+import { Home, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationCenter } from "@/components/notification-center";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNotificationStore } from "@/store/notifications";
 import { onAuthStateChanged, auth, fetchUserProfile } from "@/lib/firebase";
 import { useProfileStore } from "@/store/profile";
@@ -16,8 +16,10 @@ import { ProfileMenu } from "./profile-menu";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const subscribe = useNotificationStore((s) => s.subscribe);
-  const { setUser, setProfile, profile } = useProfileStore();
+  const { setUser, setProfile, profile, user } = useProfileStore();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsub = subscribe();
@@ -28,14 +30,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         setProfile(profileData as any);
       } else {
         setProfile(null);
+        if (pathname !== '/login') {
+            router.push('/login');
+        }
       }
+      setLoading(false);
     });
 
     return () => {
       unsub && unsub();
       unsubAuth();
     };
-  }, [subscribe, setProfile, setUser]);
+  }, [subscribe, setProfile, setUser, router, pathname]);
 
   const visibleFlows = aiFlows.filter(f => 
       f.slug !== "/" && 
@@ -43,6 +49,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       f.slug !== "/settings" &&
       profile?.role && f.roles.includes(profile.role)
   );
+
+  if (loading || (!user && pathname !== '/login')) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    )
+  }
+
+  if (!user && pathname === '/login') {
+    return <>{children}</>;
+  }
+
 
   return (
     <div className="flex min-h-screen bg-background/50">
