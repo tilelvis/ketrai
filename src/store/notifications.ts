@@ -62,10 +62,16 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
   clear: async () => {
     const { notifications } = get();
-    if (notifications.length === 0) return;
+    const user = auth.currentUser;
+
+    if (!user || notifications.length === 0) return;
+
+    // Filter for notifications created by the current user
+    const userNotifications = notifications.filter(n => n.uid === user.uid);
+    if (userNotifications.length === 0) return;
 
     const batch = writeBatch(db);
-    notifications.forEach((n) => {
+    userNotifications.forEach((n) => {
       const docRef = doc(db, "notifications", n.id);
       batch.delete(docRef);
     });
