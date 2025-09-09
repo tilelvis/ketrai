@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { InviteForm } from "./invite-form";
 
 
 export default function UsersPage() {
@@ -68,9 +69,11 @@ export default function UsersPage() {
             <div className="space-y-6">
                 <div className="space-y-1">
                     <h1 className="text-2xl font-bold tracking-tight font-headline">User Management</h1>
-                    <p className="text-muted-foreground">View and manage all registered users in the system.</p>
+                    <p className="text-muted-foreground">Invite, view, and manage all registered users in the system.</p>
                 </div>
                 <Separator />
+
+                <InviteForm />
 
                 <Card>
                     <CardHeader>
