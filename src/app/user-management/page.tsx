@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getUsers, updateUserRole } from "./actions";
 import { Profile } from "@/store/profile";
 import { RoleGate } from "@/components/role-gate";
@@ -13,21 +13,29 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 function UserManagementTable() {
     const [users, setUsers] = useState<(Profile & { id: string })[]>([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<Record<string, boolean>>({});
 
-    useEffect(() => {
-        async function fetchUsers() {
-            setLoading(true);
+    const fetchUsers = useCallback(async () => {
+        setLoading(true);
+        try {
             const userList = await getUsers();
             setUsers(userList);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast.error(`Failed to fetch users: ${message}`);
+        } finally {
             setLoading(false);
         }
-        fetchUsers();
     }, []);
+
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
 
     const handleRoleChange = async (uid: string, newRole: Profile['role']) => {
         setUpdating(prev => ({ ...prev, [uid]: true }));
@@ -44,7 +52,7 @@ function UserManagementTable() {
     if (loading) {
         return (
             <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
+                {[...Array(3)].map((_, i) => (
                     <div key={i} className="flex items-center space-x-4 p-4 border rounded-md">
                         <Skeleton className="h-12 w-12 rounded-full" />
                         <div className="space-y-2 flex-1">
@@ -61,8 +69,16 @@ function UserManagementTable() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>All Users</CardTitle>
-                <CardDescription>View and manage all registered users in the system.</CardDescription>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>All Users</CardTitle>
+                        <CardDescription>View and manage all registered users in the system.</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
                 <Table>
