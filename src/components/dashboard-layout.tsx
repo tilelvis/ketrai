@@ -17,10 +17,6 @@ import {
 } from '@/components/ui/sidebar';
 import {
   Bell,
-  Home,
-  Route,
-  FilePenLine,
-  ShieldAlert,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -33,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Logo } from '@/components/icons';
+import { aiFlows, getFlowBySlug } from '@/ai/flowRegistry';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -41,12 +38,7 @@ type DashboardLayoutProps = {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
 
-  const menuItems = [
-    { href: "/", icon: Home, label: "Dashboard" },
-    { href: "/smart-dispatch", icon: Route, label: "Smart Dispatch" },
-    { href: "/automated-claim", icon: FilePenLine, label: "Automated Claim" },
-    { href: "/risk-visibility", icon: ShieldAlert, label: "Risk Visibility" },
-  ];
+  const currentFlow = getFlowBySlug(pathname);
 
   return (
     <SidebarProvider>
@@ -59,13 +51,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {menuItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname === item.href}>
+            {aiFlows.map((item) => (
+              <SidebarMenuItem key={item.slug}>
+                <Link href={item.slug}>
+                  <SidebarMenuButton asChild isActive={pathname === item.slug}>
                     <span>
                       <item.icon />
-                      {item.label}
+                      {item.name}
                     </span>
                   </SidebarMenuButton>
                 </Link>
@@ -90,7 +82,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <header className="flex h-14 items-center justify-between gap-4 border-b bg-card/50 px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h2 className="text-lg font-semibold font-headline">{menuItems.find(item => item.href === pathname)?.label || 'Dashboard'}</h2>
+            <h2 className="text-lg font-semibold font-headline">{currentFlow?.name || 'Dashboard'}</h2>
           </div>
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon">
