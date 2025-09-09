@@ -1,7 +1,8 @@
 
+
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc } from "firebase/firestore";
 
 const firebaseConfig = {
   "projectId": "chainflow-ai",
@@ -22,7 +23,6 @@ export async function fetchUserProfile(user: User) {
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    // Return null if the profile doesn't exist; creation is handled on signup.
     console.log(`Profile for ${user.uid} does not exist.`);
     return null;
   }
@@ -30,4 +30,4 @@ export async function fetchUserProfile(user: User) {
   return snap.data();
 }
 
-export { onAuthStateChanged, setDoc, doc };
+export { onAuthStateChanged, setDoc, doc, collection, getDocs, updateDoc };

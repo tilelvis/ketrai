@@ -3,7 +3,7 @@
  * This allows for dynamic generation of navigation and easy registration of new flows.
  */
 
-import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings } from "lucide-react";
+import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings, Users } from "lucide-react";
 
 export const aiFlows = [
   { 
@@ -12,7 +12,7 @@ export const aiFlows = [
     file: "proactive-eta-calculation",
     icon: Home,
     description: "AI-Powered Workflows for supply chain orchestration.",
-    roles: ['dispatcher', 'claims', 'support'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
   {
     name: "Proactive ETA",
@@ -20,7 +20,7 @@ export const aiFlows = [
     file: "proactive-eta-calculation",
     icon: Timer,
     description: "Recalculate delivery ETAs in real-time using traffic and weather.",
-    roles: ['dispatcher', 'support'],
+    roles: ['dispatcher', 'support', 'manager', 'admin'],
   },
   { 
     name: "Smart Dispatch", 
@@ -28,7 +28,7 @@ export const aiFlows = [
     file: "smart-dispatch-recommendation",
     icon: Route,
     description: "Analyze route risks to find the optimal and safest path.",
-    roles: ['dispatcher'],
+    roles: ['dispatcher', 'manager', 'admin'],
   },
   { 
     name: "Automated Claim", 
@@ -36,7 +36,7 @@ export const aiFlows = [
     file: "automated-insurance-claim-draft",
     icon: FilePenLine,
     description: "Auto-draft insurance claims for damaged or lost packages.",
-    roles: ['claims'],
+    roles: ['claims', 'manager', 'admin'],
   },
   { 
     name: "Risk Visibility", 
@@ -44,7 +44,15 @@ export const aiFlows = [
     file: "cross-carrier-risk-visibility",
     icon: ShieldAlert,
     description: "Aggregate shipment data to identify and report on supply chain risks.",
-    roles: ['dispatcher'],
+    roles: ['dispatcher', 'manager', 'admin'],
+  },
+  {
+    name: "User Management",
+    slug: "/user-management",
+    file: "",
+    icon: Users,
+    description: "Manage users and their roles.",
+    roles: ['admin'],
   },
   {
     name: "Profile",
@@ -52,7 +60,7 @@ export const aiFlows = [
     file: "",
     icon: User,
     description: "User profile settings.",
-    roles: ['dispatcher', 'claims', 'support'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
   {
     name: "Settings",
@@ -60,7 +68,7 @@ export const aiFlows = [
     file: "",
     icon: Settings,
     description: "Application settings.",
-    roles: ['dispatcher', 'claims', 'support'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
 ];
 

@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons";
 import { aiFlows } from "@/ai/flowRegistry";
-import { Home, Loader2 } from "lucide-react";
+import { Home, Loader2, Users } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationCenter } from "@/components/notification-center";
 import { useEffect, useState } from "react";
@@ -28,8 +28,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       setUser(user);
       if (user) {
         let profileData = await fetchUserProfile(user);
-        // If profile doesn't exist, it might be a login for a user created
-        // before the signup-creation logic was in place. Create it now.
         if (!profileData) {
             console.log("Profile not found for existing user, creating one now.");
             const newProfile = {
@@ -62,12 +60,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     };
   }, [subscribe, setProfile, setUser, router, pathname]);
 
-  const visibleFlows = aiFlows.filter(f => 
+  const mainNavItems = aiFlows.filter(f => 
       f.slug !== "/" && 
       f.slug !== "/profile" && 
       f.slug !== "/settings" &&
+      f.slug !== "/user-management" &&
       profile?.role && f.roles.includes(profile.role)
   );
+
+  const adminNavItems = aiFlows.filter(f => 
+      f.slug === "/user-management" &&
+      profile?.role && f.roles.includes(profile.role)
+  );
+
+  const bottomNavItems = aiFlows.filter((f) => f.slug === "/profile" || f.slug === "/settings");
+
 
   if (loading || (!user && pathname !== '/login')) {
     return (
@@ -102,7 +109,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <Home className="h-4 w-4" />
             Dashboard
           </Link>
-          {visibleFlows.map((item) => (
+          {mainNavItems.map((item) => (
             <Link
               key={item.slug}
               href={item.slug}
@@ -117,11 +124,30 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               {item.name}
             </Link>
           ))}
+          {adminNavItems.length > 0 && (
+             <div className="pt-4">
+                <h2 className="px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-1">Admin</h2>
+                 {adminNavItems.map((item) => (
+                    <Link
+                    key={item.slug}
+                    href={item.slug}
+                    className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
+                        pathname.startsWith(item.slug)
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                    </Link>
+                ))}
+            </div>
+          )}
         </nav>
         <div className="mt-auto">
           <nav className="space-y-2">
-            {aiFlows
-              .filter((f) => f.slug === "/profile" || f.slug === "/settings")
+            {bottomNavItems
               .map((item) => (
                 <Link
                   key={item.slug}
