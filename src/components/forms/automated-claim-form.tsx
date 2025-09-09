@@ -6,8 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-import { runAutomatedClaim } from "@/app/automated-claim/actions";
-import type { AutomatedInsuranceClaimDraftOutput } from "@/ai/flows/automated-insurance-claim-draft";
+import { submitClaimRequest } from "@/app/automated-claim/actions";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -16,9 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FilePenLine } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 
 const formSchema = z.object({
+  claimReason: z.string({ required_error: "Please select a reason for the claim."}),
   packageTrackingHistory: z.string().min(1, "Tracking history is required."),
   productDetails: z.string().min(1, "Product details are required."),
   damagePhotoDataUri: z.string().optional(),
@@ -27,7 +28,7 @@ const formSchema = z.object({
 export function AutomatedClaimForm({
   onComplete,
 }: {
-  onComplete: (result: AutomatedInsuranceClaimDraftOutput) => void;
+  onComplete: () => void;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -42,35 +43,56 @@ export function AutomatedClaimForm({
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    toast.info("Generating insurance claim draft...");
+    toast.info("Submitting claim request...");
     
-    // In a real app, you would handle file uploads and convert the image to a Base64 data URI.
-    const inputs = {...values};
+    const result = await submitClaimRequest(values);
 
-    try {
-      const output = await runAutomatedClaim(inputs);
-      onComplete(output);
-      toast.success("Claim draft generated successfully!");
-    } catch (error) {
-       toast.error(error instanceof Error ? error.message : "An unknown error occurred.");
-    } finally {
-      setLoading(false);
+    if (result.success) {
+      toast.success("Claim request submitted successfully!");
+      onComplete();
+    } else {
+      toast.error(result.error);
     }
+    
+    setLoading(false);
   }
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-lg font-medium font-headline">Claim Input Details</CardTitle>
+            <CardTitle className="text-lg font-medium font-headline">Claim Request Details</CardTitle>
             <FilePenLine className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
             <CardDescription className="mb-4">
-              Provide the package history, item details, and any evidence to generate a claim draft.
+              Provide the package history, item details, and reason for the claim.
             </CardDescription>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                 <FormField
+                  control={form.control}
+                  name="claimReason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reason for Claim</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                           <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a reason" />
+                                </SelectTrigger>
+                           </FormControl>
+                            <SelectContent>
+                                <SelectItem value="Item Damaged in Transit">Item Damaged in Transit</SelectItem>
+                                <SelectItem value="Package Lost">Package Lost</SelectItem>
+                                <SelectItem value="Incorrect Item Delivered">Incorrect Item Delivered</SelectItem>
+                                <SelectItem value="Theft or Vandalism">Theft or Vandalism</SelectItem>
+                            </SelectContent>
+                        </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="packageTrackingHistory"
@@ -100,7 +122,7 @@ export function AutomatedClaimForm({
                 {/* We could add a file upload here for the damagePhotoDataUri */}
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Draft Claim
+                  Submit Request
                 </Button>
               </form>
             </Form>

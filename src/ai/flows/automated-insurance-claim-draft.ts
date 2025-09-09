@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -11,11 +12,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 
 const AutomatedInsuranceClaimDraftInputSchema = z.object({
   packageTrackingHistory: z.string().describe('Package tracking history from courier API.'),
+  claimReason: z.string().describe('The reason for the insurance claim (e.g., Item Damaged, Package Lost).'),
   damagePhotoDataUri: z
     .string()
     .describe(
@@ -23,6 +25,7 @@ const AutomatedInsuranceClaimDraftInputSchema = z.object({
     )
     .optional(),
   productDetails: z.string().describe('Product details and value from e-commerce platform API.'),
+  claimId: z.string().describe('The ID of the claim document in Firestore.'),
 });
 export type AutomatedInsuranceClaimDraftInput = z.infer<
   typeof AutomatedInsuranceClaimDraftInputSchema
@@ -51,6 +54,7 @@ const prompt = ai.definePrompt({
 Create a complete insurance claim draft using the following information. Your primary goal is to generate a structured, accurate, and professional claim that can be reviewed and submitted with minimal changes.
 
 Input Data:
+- Reason for Claim: {{{claimReason}}}
 - Package Tracking History: {{{packageTrackingHistory}}}
 - Product Details & Value: {{{productDetails}}}
 - Photo Evidence of Damage: {{#if damagePhotoDataUri}}{{media url=damagePhotoDataUri}}{{else}}No photo evidence was provided.{{/if}}
@@ -81,17 +85,18 @@ const automatedInsuranceClaimDraftFlow = ai.defineFlow(
     }
 
     try {
-        await addDoc(collection(db, "claims"), {
-            ...JSON.parse(output.claimDraftJson),
+        const claimRef = doc(db, "claims", input.claimId);
+        await updateDoc(claimRef, {
             claimDraftText: output.claimDraftText,
             claimDraftJson: output.claimDraftJson,
-            inputs: input,
-            createdAt: serverTimestamp(),
+            status: "drafted",
+            draftedAt: serverTimestamp(),
         });
     } catch (e) {
-        console.error("Failed to save claim to Firestore:", e);
-        // We don't want to fail the whole flow if saving fails,
-        // so we'll just log the error and continue.
+        console.error("Failed to update claim in Firestore:", e);
+        // Unlike before, failing to save is now a critical error
+        // because the admin expects the record to be updated.
+        throw new Error("Failed to save claim draft to the database.");
     }
 
     return output;
