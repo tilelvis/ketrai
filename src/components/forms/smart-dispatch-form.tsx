@@ -11,7 +11,6 @@ import {
     XAxis,
     YAxis,
     Tooltip,
-    ResponsiveContainer,
   } from "recharts"
 
 import { smartDispatchRecommendation } from "@/ai/flows/smart-dispatch-recommendation";
@@ -22,7 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Plus, Trash2, Lightbulb } from "lucide-react";
+import { Loader2, Plus, Trash2, Lightbulb, CheckCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
@@ -116,20 +115,22 @@ export function SmartDispatchForm() {
               <FormLabel>Route Options</FormLabel>
               {fields.map((field, index) => (
                 <Card key={field.id} className="p-4 space-y-2 relative bg-card">
-                  <FormField
-                      control={form.control}
-                      name={`routes.${index}.routeId`}
-                      render={({ field }) => (
-                          <FormItem><FormControl><Input className="h-8" placeholder="Route ID" {...field} /></FormControl></FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name={`routes.${index}.estimatedTime`}
-                      render={({ field }) => (
-                          <FormItem><FormControl><Input className="h-8" placeholder="Est. Time" {...field} /></FormControl></FormItem>
-                      )}
-                  />
+                   <div className="flex flex-col space-y-2">
+                    <FormField
+                        control={form.control}
+                        name={`routes.${index}.routeId`}
+                        render={({ field }) => (
+                            <FormItem><FormControl><Input className="h-8" placeholder="Route ID" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name={`routes.${index}.estimatedTime`}
+                        render={({ field }) => (
+                            <FormItem><FormControl><Input className="h-8" placeholder="Est. Time" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}
+                    />
+                   </div>
                   <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
                 </Card>
               ))}
@@ -143,7 +144,7 @@ export function SmartDispatchForm() {
               name="realTimeTrafficData"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Other Risk Factors</FormLabel>
+                  <FormLabel>Other Risk Factors (Traffic, Events, etc.)</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Traffic, events, theft data..." {...field} />
                   </FormControl>
@@ -192,10 +193,10 @@ export function SmartDispatchForm() {
               </div>
               <Separator />
               <div>
-                  <p className="font-semibold mb-2">Risk Index Comparison:</p>
+                  <p className="font-semibold mb-2">Risk Index Comparison (Lower is Better):</p>
                   <div className="h-[150px]">
                     <ChartContainer config={{}} className="h-full w-full">
-                        <BarChart data={chartData} accessibilityLayer>
+                        <BarChart data={chartData} accessibilityLayer margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
                             <CartesianGrid vertical={false} />
                             <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
                             <YAxis domain={[0, 100]} />
@@ -216,11 +217,14 @@ export function SmartDispatchForm() {
 
       {currentStep === 2 && (
         <Card>
-            <CardHeader>
+            <CardHeader className="items-center text-center">
+                <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
                 <CardTitle>Dispatch Confirmed</CardTitle>
+                <CardDescription>
+                  The optimal route <span className="font-semibold bg-primary/20 text-primary-foreground p-1 rounded-md">{result?.optimalRoute}</span> has been dispatched.
+                </CardDescription>
             </CardHeader>
             <CardContent>
-                <p>The optimal route <span className="font-semibold bg-primary/20 text-primary-foreground p-1 rounded-md">{result?.optimalRoute}</span> has been dispatched.</p>
                 <Button onClick={handleReset} className="w-full mt-4">Start New Assessment</Button>
             </CardContent>
         </Card>

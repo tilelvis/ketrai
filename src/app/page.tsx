@@ -41,10 +41,10 @@ export default function Home() {
               <CardTitle className="text-sm font-medium">
                 ETA Alerts
               </CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              <AlertCircle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">+52</div>
+              <div className="text-2xl font-bold text-destructive">+52</div>
               <p className="text-xs text-muted-foreground">
                 in the last 24 hours
               </p>
@@ -78,14 +78,16 @@ export default function Home() {
           </Card>
         </div>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium font-headline">Proactive ETA Calculator</CardTitle>
-              <Timer className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="mb-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-medium font-headline">
+                <Timer className="h-5 w-5 text-muted-foreground" />
+                Proactive ETA Calculator
+              </CardTitle>
+              <CardDescription className="pt-2">
                 Recalculate ETAs based on real-time traffic and weather data.
               </CardDescription>
+            </CardHeader>
+            <CardContent>
               <ProactiveEtaForm />
             </CardContent>
           </Card>

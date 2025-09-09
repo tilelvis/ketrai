@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Code } from "lucide-react";
+import { Loader2, Code, MessageSquareText, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "../ui/separator";
@@ -99,7 +99,7 @@ export function ProactiveEtaForm() {
           />
           <Button type="submit" disabled={loading} className="w-full">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Calculate ETA
+            Calculate New ETA
           </Button>
         </form>
       </Form>
@@ -109,10 +109,18 @@ export function ProactiveEtaForm() {
             <CardTitle className="text-base font-headline">Calculation Result</CardTitle>
             <CardDescription>AI-generated ETA and customer notification.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p><span className="font-semibold">Updated ETA:</span> {result.updatedEta}</p>
-            <p className="font-semibold">SMS to Customer:</p>
-            <p className="rounded-md border bg-card p-3">{result.smsText}</p>
+          <CardContent className="space-y-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <p><span className="font-semibold">Updated ETA:</span> {result.updatedEta}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-semibold flex items-center gap-2">
+                <MessageSquareText className="h-5 w-5 text-muted-foreground" />
+                SMS to Customer
+              </p>
+              <p className="rounded-md border bg-card p-3">{result.smsText}</p>
+            </div>
           </CardContent>
 
           {isDeveloperMode && result.developerInfo && (

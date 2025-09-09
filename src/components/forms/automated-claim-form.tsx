@@ -17,8 +17,8 @@ import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
-  packageTrackingHistory: z.string().min(1),
-  productDetails: z.string().min(1),
+  packageTrackingHistory: z.string().min(1, "Tracking history is required."),
+  productDetails: z.string().min(1, "Product details are required."),
   damagePhotoDataUri: z.string().optional(),
 });
 
@@ -96,6 +96,7 @@ export function AutomatedClaimForm() {
               </FormItem>
             )}
           />
+          {/* We could add a file upload here for the damagePhotoDataUri */}
           <Button type="submit" disabled={loading} className="w-full">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Draft Claim
