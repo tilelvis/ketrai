@@ -5,7 +5,7 @@
  * and generates a summarized report with critical alerts for proactive supply chain risk management.
  *
  * - crossCarrierRiskVisibility - A function that orchestrates the cross-carrier risk visibility process.
- * - CrossCarrierRiskVisibilityInput - The input type for the crossCarrierRiskVisibility function (empty object).
+ * - CrossCarrierRiskVisibilityInput - The input type for the crossCarrierRiskVisibility function.
  * - CrossCarrierRiskVisibilityOutput - The return type for the crossCarrierRiskVisibility function,
  *   containing a dashboard-ready JSON report and alert notifications.
  */
@@ -13,12 +13,31 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const CrossCarrierRiskVisibilityInputSchema = z.object({});
+const CarrierInputSchema = z.object({
+  carrier: z.string(),
+  trackingNumber: z.string(),
+  status: z.string(),
+  location: z.string(),
+  eta: z.string().optional(),
+  riskFactors: z.array(z.string()).optional(),
+});
+
+const CrossCarrierRiskVisibilityInputSchema = z.object({
+  shipments: z.array(CarrierInputSchema),
+  alerts: z.array(z.string()).optional(), // e.g., ["Weather: Nairobi floods", "Port strike in Mombasa"]
+});
+
 export type CrossCarrierRiskVisibilityInput = z.infer<typeof CrossCarrierRiskVisibilityInputSchema>;
 
 const CrossCarrierRiskVisibilityOutputSchema = z.object({
-  dashboardReport: z.string().describe('A dashboard-ready JSON report summarizing supply chain risks.'),
-  criticalAlerts: z.array(z.string()).describe('Alert notifications for new critical risks.'),
+  summary: z.string().describe("A short, professional summary for a logistics manager."),
+  groupedRisks: z.array(
+    z.object({
+      riskType: z.string().describe("The type of risk (e.g., Weather, Civil Unrest, Port Strike)."),
+      shipments: z.array(z.string()).describe("Array of tracking numbers for affected shipments."),
+      note: z.string().describe("A note explaining the risk."),
+    })
+  ),
 });
 export type CrossCarrierRiskVisibilityOutput = z.infer<typeof CrossCarrierRiskVisibilityOutputSchema>;
 
@@ -32,7 +51,19 @@ const prompt = ai.definePrompt({
   name: 'crossCarrierRiskVisibilityPrompt',
   input: {schema: CrossCarrierRiskVisibilityInputSchema},
   output: {schema: CrossCarrierRiskVisibilityOutputSchema},
-  prompt: `Summarize supply chain risks in a structured report.\nGroup by risk type (Weather, Civil Unrest, Strikes, Accidents).\nList affected tracking numbers under each category.\nHighlight new critical risks that emerged since last run.`,
+  prompt: `You are a logistics visibility assistant.
+
+You receive shipment data from multiple carriers:
+{{{json shipments}}}
+
+Additional alerts:
+{{{json alerts}}}
+
+Task:
+1. Identify shipments at risk (cross-reference alerts + shipment risks).
+2. Group affected shipments by risk type (e.g., Weather, Civil Unrest, Port Strike).
+3. Write a short, professional summary for a logistics manager.
+4. Output strictly following schema.`,
 });
 
 const crossCarrierRiskVisibilityFlow = ai.defineFlow(
@@ -42,21 +73,10 @@ const crossCarrierRiskVisibilityFlow = ai.defineFlow(
     outputSchema: CrossCarrierRiskVisibilityOutputSchema,
   },
   async input => {
-    // TODO: Implement the steps for the flow here:
-    // 1. Call tracking APIs for all connected couriers (DHL, UPS, FedEx, local carriers, etc.).
-    // 2. Aggregate all active shipments into a master list.
-    // 3. Cross-check each shipment against risk data sources (weather alerts, strikes, port disruptions, unrest).
-    // 4. Identify at-risk shipments.
-
-    // For now, we'll just call the prompt with an empty input and return its output.
-    // Replace this with actual data aggregation and risk assessment logic.
     const {output} = await prompt(input);
-
-    // TODO: Update Firebase dashboard with summary and send critical alerts via Twilio/email.
-
-    return {
-      dashboardReport: output?.dashboardReport || 'No risks identified.',
-      criticalAlerts: output?.criticalAlerts || [],
-    };
+    if (!output) {
+      throw new Error('No output from prompt');
+    }
+    return output;
   }
 );
