@@ -7,6 +7,7 @@ export type Profile = {
   name: string;
   role: "dispatcher" | "manager" | "claims" | "admin" | "support";
   theme: "light" | "dark" | "system";
+  status: "active" | "inactive";
   photoURL?: string;
 };
 

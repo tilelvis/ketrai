@@ -24,6 +24,7 @@ const profileSchema = z.object({
   photoURL: z.string().url("Must be a valid URL.").optional().or(z.literal("")),
   theme: z.enum(["light", "dark", "system"]),
   role: z.enum(["dispatcher", "manager", "claims", "admin", "support"]),
+  status: z.enum(["active", "inactive"]),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -39,6 +40,7 @@ export default function ProfilePage() {
       photoURL: "",
       theme: "system",
       role: "dispatcher",
+      status: "active",
     },
   });
 
@@ -49,6 +51,7 @@ export default function ProfilePage() {
         photoURL: profile.photoURL ?? "",
         theme: profile.theme,
         role: profile.role,
+        status: profile.status,
       });
     }
   }, [profile, form]);

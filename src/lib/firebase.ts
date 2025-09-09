@@ -23,8 +23,19 @@ export async function fetchUserProfile(user: User) {
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    console.log(`Profile for ${user.uid} does not exist.`);
-    return null;
+    console.log(`Profile for ${user.uid} does not exist. Creating one.`);
+    const newProfile = {
+      uid: user.uid,
+      email: user.email,
+      name: user.displayName ?? user.email?.split('@')[0] ?? "New User",
+      role: "dispatcher",
+      theme: "system",
+      status: "active",
+      createdAt: new Date().toISOString(),
+      photoURL: user.photoURL ?? "",
+    };
+    await setDoc(ref, newProfile);
+    return newProfile;
   }
 
   return snap.data();

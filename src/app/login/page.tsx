@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { notify } from "@/lib/notify";
 import { Logo } from "@/components/icons";
+import { Profile } from "@/store/profile";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,13 +35,13 @@ export default function LoginPage() {
         const user = userCredential.user;
         
         // Create user profile document immediately after signup
-        const profile = {
+        const profile: Profile = {
           uid: user.uid,
           email: user.email,
           name: user.email?.split('@')[0] ?? "New User",
           role: "dispatcher",
           theme: "system",
-          createdAt: new Date().toISOString(),
+          status: "active",
           photoURL: user.photoURL ?? "",
         };
         await setDoc(doc(db, "users", user.uid), profile);

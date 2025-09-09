@@ -36,6 +36,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               name: user.displayName ?? user.email?.split('@')[0] ?? "New User",
               role: "dispatcher",
               theme: "system",
+              status: "active",
               createdAt: new Date().toISOString(),
               photoURL: user.photoURL ?? "",
             };
@@ -68,10 +69,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       profile?.role && f.roles.includes(profile.role)
   );
 
-  const adminNavItems = aiFlows.filter(f => 
-      f.slug === "/user-management" &&
-      profile?.role && f.roles.includes(profile.role)
-  );
 
   const bottomNavItems = aiFlows.filter((f) => f.slug === "/profile" || f.slug === "/settings");
 
@@ -124,24 +121,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               {item.name}
             </Link>
           ))}
-          {adminNavItems.length > 0 && (
+          {profile?.role === 'admin' && (
              <div className="pt-4">
                 <h2 className="px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-1">Admin</h2>
-                 {adminNavItems.map((item) => (
-                    <Link
-                    key={item.slug}
-                    href={item.slug}
+                <Link
+                    href="/admin/users"
                     className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
-                        pathname.startsWith(item.slug)
+                        pathname.startsWith("/admin/users")
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                     >
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
-                    </Link>
-                ))}
+                    <Users className="h-4 w-4" />
+                    User Management
+                </Link>
             </div>
           )}
         </nav>
