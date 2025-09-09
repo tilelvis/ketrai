@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons";
 import { aiFlows } from "@/ai/flowRegistry";
+import { Home } from "lucide-react";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,21 +20,53 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <h1 className="text-xl font-semibold font-headline">ChainFlow AI</h1>
         </div>
         <nav className="space-y-2">
-          {aiFlows.filter(f => f.slug !== '/').map((item) => (
+            <Link
+              href="/"
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
+                pathname === "/"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Home className="h-4 w-4" />
+              Dashboard
+            </Link>
+          {aiFlows.filter(f => f.slug !== '/' && f.slug !=='/profile' && f.slug !== '/settings').map((item) => (
             <Link
               key={item.slug}
               href={item.slug}
               className={cn(
-                "block rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
                 pathname.startsWith(item.slug)
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
+              <item.icon className="h-4 w-4" />
               {item.name}
             </Link>
           ))}
         </nav>
+        <div className="mt-auto">
+             <nav className="space-y-2">
+                {aiFlows.filter(f => f.slug === '/profile' || f.slug === '/settings').map((item) => (
+                    <Link
+                    key={item.slug}
+                    href={item.slug}
+                    className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
+                        pathname.startsWith(item.slug)
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                    </Link>
+                ))}
+            </nav>
+        </div>
       </aside>
 
       {/* Main content */}

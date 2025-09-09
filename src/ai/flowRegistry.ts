@@ -3,7 +3,7 @@
  * This allows for dynamic generation of navigation and easy registration of new flows.
  */
 
-import { FilePenLine, Home, Route, ShieldAlert, Timer } from "lucide-react";
+import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings } from "lucide-react";
 
 export const aiFlows = [
   { 
@@ -45,6 +45,22 @@ export const aiFlows = [
     icon: ShieldAlert,
     description: "Aggregate shipment data to identify and report on supply chain risks.",
     roles: ['dispatcher'],
+  },
+  {
+    name: "Profile",
+    slug: "/profile",
+    file: "",
+    icon: User,
+    description: "User profile settings.",
+    roles: ['dispatcher', 'claims', 'support'],
+  },
+  {
+    name: "Settings",
+    slug: "/settings",
+    file: "",
+    icon: Settings,
+    description: "Application settings.",
+    roles: ['dispatcher', 'claims', 'support'],
   },
 ];
 
