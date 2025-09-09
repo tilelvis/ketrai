@@ -35,6 +35,7 @@ export function AutomatedClaimForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      claimReason: "Item Damaged in Transit",
       packageTrackingHistory: "2024-07-28: Departed from Nairobi warehouse.\n2024-07-29: In transit via A104 highway.\n2024-07-30: Arrived at Mombasa distribution center, item reported as damaged upon inspection.",
       productDetails: "Item: Box of Kenyan Tea, Value: KES 5,000, SKU: KT-EXP-01",
       damagePhotoDataUri: "",

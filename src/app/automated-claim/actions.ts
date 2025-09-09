@@ -18,6 +18,9 @@ type ClaimRequestInput = z.infer<typeof ClaimRequestSchema>;
 
 export async function submitClaimRequest(data: ClaimRequestInput) {
   try {
+    // This now runs on the server with admin privileges,
+    // but we should still enforce logic that a user must be authenticated.
+    // The security rules will handle the role-based read/update logic.
     await addDoc(collection(db, "claims"), {
       ...data,
       status: "pending_review",
@@ -27,6 +30,7 @@ export async function submitClaimRequest(data: ClaimRequestInput) {
   } catch (error) {
     console.error("Failed to submit claim request:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred.";
+    // Ensure we return a structured error that the client can handle
     return { success: false, error: `Failed to submit claim request: ${message}` };
   }
 }
