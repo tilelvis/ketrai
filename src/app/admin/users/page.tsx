@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Users, Mail, Clock } from "lucide-react";
+import { RefreshCw, Users, Mail, Clock, Ban } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { InviteForm } from "./invite-form";
 
@@ -22,12 +22,11 @@ type Invite = {
     id: string;
     email: string;
     role: Profile['role'];
-    status: "pending" | "accepted" | "expired";
+    status: "pending" | "accepted" | "expired" | "cancelled";
     token: string;
     createdAt: Timestamp;
     expiresAt: Timestamp;
 }
-
 
 function InvitesTable() {
     const [invites, setInvites] = useState<Invite[]>([]);
@@ -51,12 +50,26 @@ function InvitesTable() {
     useEffect(() => {
         fetchInvites();
     }, [fetchInvites]);
+    
+    async function cancelInvite(id: string) {
+        toast.info("Cancelling invite...");
+        try {
+            await updateDoc(doc(db, "invites", id), { status: "cancelled" });
+            setInvites(prev => prev.map(i => (i.id === id ? { ...i, status: "cancelled" } : i)));
+            toast.success("Invite cancelled.");
+        } catch(err) {
+            const message = err instanceof Error ? err.message : "An unknown error occurred";
+            toast.error(`Failed to cancel invite: ${message}`);
+        }
+    }
+
 
     const getStatusVariant = (status: Invite['status']) => {
         switch (status) {
             case 'pending': return 'secondary';
             case 'accepted': return 'default';
             case 'expired': return 'destructive';
+            case 'cancelled': return 'outline';
             default: return 'outline';
         }
     }
@@ -74,6 +87,7 @@ function InvitesTable() {
                         Refresh
                     </Button>
                 </div>
+                <CardDescription>Track the status of all sent user invitations.</CardDescription>
             </CardHeader>
             <CardContent>
                 {loading ? (
@@ -87,13 +101,14 @@ function InvitesTable() {
                                 <TableHead>Email</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Created At</TableHead>
+                                <TableHead>Expires At</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {invites.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
                                         No invites have been sent yet.
                                     </TableCell>
                                 </TableRow>
@@ -107,7 +122,15 @@ function InvitesTable() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
-                                        {invite.createdAt ? new Date(invite.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                        {invite.expiresAt ? new Date(invite.expiresAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {invite.status === 'pending' && (
+                                            <Button size="sm" variant="destructive" onClick={() => cancelInvite(invite.id)}>
+                                                <Ban className="mr-2 h-4 w-4" />
+                                                Cancel
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -189,6 +212,7 @@ export default function UsersPage() {
                                 Refresh
                             </Button>
                         </div>
+                        <CardDescription>View and manage all currently active users.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {loading ? (
@@ -210,7 +234,7 @@ export default function UsersPage() {
                                     <TableHead>User</TableHead>
                                     <TableHead>Role</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Actions</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -247,7 +271,7 @@ export default function UsersPage() {
                                             {u.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="text-right">
                                         <Button
                                             size="sm"
                                             variant={u.status === "active" ? "outline" : "secondary"}
@@ -267,3 +291,5 @@ export default function UsersPage() {
         </RoleGate>
     );
 }
+
+    

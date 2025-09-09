@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/icons";
+import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import type { Profile } from "@/store/profile";
 
@@ -18,7 +19,7 @@ type Invite = {
     id: string;
     email: string;
     role: Profile['role'];
-    status: "pending" | "accepted" | "expired";
+    status: "pending" | "accepted" | "expired" | "cancelled";
     token: string;
     createdAt: Timestamp;
     expiresAt: Timestamp;
@@ -51,7 +52,7 @@ export default function InviteAcceptPage({ params }: { params: { token: string }
           const inviteData = { id: snap.docs[0].id, ...snap.docs[0].data() } as Invite;
           
           if (inviteData.status !== "pending") {
-            setError("This invite has already been used.");
+            setError(`This invite has already been ${inviteData.status}.`);
           } else if (inviteData.expiresAt.toMillis() < Date.now()) {
             setError("This invite has expired.");
           } else {
@@ -161,14 +162,17 @@ export default function InviteAcceptPage({ params }: { params: { token: string }
                         autoFocus
                     />
                 </div>
+            </CardContent>
+             <CardFooter>
                 <Button onClick={handleAccept} disabled={!password || loading} className="w-full">
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {loading ? 'Creating Account...' : 'Accept & Join'}
                 </Button>
-            </CardContent>
+            </CardFooter>
         </Card>
       </div>
     </div>
   );
 }
 
+    
