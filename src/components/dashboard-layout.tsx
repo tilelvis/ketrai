@@ -9,9 +9,17 @@ import { aiFlows } from "@/ai/flowRegistry";
 import { Home } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationCenter } from "@/components/notification-center";
+import { useEffect } from "react";
+import { useNotificationStore } from "@/store/notifications";
 
-export function DashboardLayout({ children }: { children: React.Node }) {
+export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const subscribe = useNotificationStore((s) => s.subscribe);
+
+  useEffect(() => {
+    const unsub = subscribe();
+    return () => unsub && unsub();
+  }, [subscribe]);
 
   return (
     <div className="flex min-h-screen bg-background/50">

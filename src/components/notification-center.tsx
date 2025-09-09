@@ -2,10 +2,17 @@
 "use client";
 
 import { Bell, X } from "lucide-react";
-import { useNotificationStore } from "@/store/notifications";
+import { useNotificationStore, Notification } from "@/store/notifications";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+
+function formatTimestamp(timestamp: any): string {
+    if (!timestamp || !timestamp.toDate) {
+      return new Date().toLocaleTimeString();
+    }
+    return timestamp.toDate().toLocaleTimeString();
+}
 
 export function NotificationCenter() {
   const { notifications, remove, clear } = useNotificationStore();
@@ -67,7 +74,7 @@ export function NotificationCenter() {
               {notifications.length === 0 ? (
                 <p className="p-4 text-sm text-center text-muted-foreground">No new notifications</p>
               ) : (
-                notifications.map((n) => (
+                notifications.map((n: Notification) => (
                   <motion.div
                     key={n.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -84,7 +91,7 @@ export function NotificationCenter() {
                     <div className="flex-1">
                       <p className="text-sm">{n.message}</p>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(n.timestamp).toLocaleTimeString()}
+                        {formatTimestamp(n.timestamp)}
                       </span>
                     </div>
                     <button onClick={() => remove(n.id)} className="p-1 text-muted-foreground hover:text-destructive rounded-full">
