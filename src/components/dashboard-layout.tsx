@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Logo } from "./icons";
 import { aiFlows } from "@/ai/flowRegistry";
 import { Home } from "lucide-react";
+import { ThemeToggle } from "./ui/theme-toggle";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -66,6 +67,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     </Link>
                 ))}
             </nav>
+            <ThemeToggle />
         </div>
       </aside>
 

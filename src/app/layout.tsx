@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { DeveloperProvider } from '@/hooks/use-developer';
 import { DashboardLayout } from '@/components/dashboard-layout';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'ChainFlow AI',
@@ -24,12 +25,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("font-body antialiased")}>
-        <DeveloperProvider>
-            <DashboardLayout>
-                {children}
-            </DashboardLayout>
-          <Toaster />
-        </DeveloperProvider>
+        <ThemeProvider>
+            <DeveloperProvider>
+                <DashboardLayout>
+                    {children}
+                </DashboardLayout>
+              <Toaster />
+            </DeveloperProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
