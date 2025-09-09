@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { DeveloperProvider } from '@/hooks/use-developer';
+import { DashboardLayout } from '@/components/dashboard-layout';
 
 export const metadata: Metadata = {
   title: 'ChainFlow AI',
@@ -24,7 +25,9 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased")}>
         <DeveloperProvider>
-          {children}
+            <DashboardLayout>
+                {children}
+            </DashboardLayout>
           <Toaster />
         </DeveloperProvider>
       </body>
