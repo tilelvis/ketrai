@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -90,20 +91,18 @@ export default function Home() {
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               {aiFlows.filter(f => f.slug !== '/').map(flow => (
-                <Link href={flow.slug} key={flow.slug} legacyBehavior>
-                  <a className="block h-full">
-                    <Card className="hover:border-primary hover:bg-primary/5 h-full transition-colors">
-                      <CardHeader>
-                        <div className="flex items-center gap-3">
-                          <flow.icon className="h-6 w-6 text-primary" />
-                          <CardTitle className="text-base font-semibold">{flow.name}</CardTitle>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground">{flow.description}</p>
-                      </CardContent>
-                    </Card>
-                  </a>
+                <Link href={flow.slug} key={flow.slug} className="block h-full">
+                  <Card className="hover:border-primary hover:bg-primary/5 h-full transition-colors">
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <flow.icon className="h-6 w-6 text-primary" />
+                        <CardTitle className="text-base font-semibold">{flow.name}</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{flow.description}</p>
+                    </CardContent>
+                  </Card>
                 </Link>
               ))}
             </CardContent>
