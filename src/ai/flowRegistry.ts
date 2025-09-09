@@ -1,17 +1,18 @@
+
 /**
  * @fileOverview A central registry for all AI flows available in the application.
  * This allows for dynamic generation of navigation and easy registration of new flows.
  */
 
-import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings, Users, ClipboardList } from "lucide-react";
+import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings, Users, ClipboardList, Map } from "lucide-react";
 
 export const aiFlows = [
   { 
     name: "Dashboard", 
     slug: "/",
     file: "proactive-eta-calculation",
-    icon: Home,
-    description: "AI-Powered Workflows for supply chain orchestration.",
+    icon: Map,
+    description: "Real-time fleet monitoring and AI-powered insights.",
     roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
   {
@@ -36,7 +37,7 @@ export const aiFlows = [
     file: "automated-insurance-claim-draft",
     icon: FilePenLine,
     description: "Auto-draft insurance claims for damaged or lost packages.",
-    roles: ['claims', 'manager', 'admin'],
+    roles: ['claims', 'manager', 'admin', 'dispatcher', 'support'],
   },
     { 
     name: "Claims History", 
