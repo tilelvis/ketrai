@@ -13,10 +13,11 @@ import { notify } from "@/lib/notify";
 
 export function CrossCarrierForm({ onComplete }: { onComplete: (result: CrossCarrierRiskVisibilityOutput) => void }) {
   const [shipments, setShipments] = useState<any[]>([
-    { carrier: "DHL", trackingNumber: "DHL12345", status: "In Transit", location: "Nairobi, KE", eta: "2024-08-01" },
-    { carrier: "UPS", trackingNumber: "UPS67890", status: "Delayed", location: "Mombasa, KE", eta: "2024-08-02" },
+    { carrier: "G4S", trackingNumber: "G4S12345", status: "In Transit", location: "Nairobi, KE", eta: "2024-08-01" },
+    { carrier: "Wells Fargo", trackingNumber: "WF67890", status: "Delayed", location: "Mombasa, KE", eta: "2024-08-02" },
+    { carrier: "Sendy", trackingNumber: "SDY-555", status: "Out for Delivery", location: "Kisumu, KE", eta: "2024-07-30" },
   ]);
-  const [alerts, setAlerts] = useState("Port strike in Mombasa\nWeather: Nairobi floods");
+  const [alerts, setAlerts] = useState("Port strike in Mombasa\nWeather: Heavy rains in the Rift Valley");
   const [loading, setLoading] = useState(false);
 
   function addShipment() {

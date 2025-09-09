@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,52 +7,87 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import { notify } from "@/lib/notify";
+import type { ProactiveEtaCalculationOutput } from "@/ai/flows/proactive-eta-calculation";
+import { toast } from "sonner";
 
 export function ProactiveEtaForm({
   onComplete,
 }: {
-  onComplete: (result: any) => void;
+  onComplete: (result: ProactiveEtaCalculationOutput) => void;
 }) {
-  const [route, setRoute] = useState("Route from warehouse A to customer address at 123 Main St.");
-  const [plannedEta, setPlannedEta] = useState("2024-08-15T15:00:00Z");
-  const [traffic, setTraffic] = useState("Moderate congestion on I-5, accident near exit 4.");
-  const [weather, setWeather] = useState("Light rain, 15 mph winds.");
+  const [route, setRoute] = useState("Route from Nairobi CBD to a customer in Ruaka.");
+  const [plannedEta, setPlannedEta] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString());
+  const [traffic, setTraffic] = useState("Heavy traffic on Waiyaki Way, accident near ABC Place.");
+  const [weather, setWeather] = useState("Heavy rainfall and thunderstorms expected in the afternoon.");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const result = await runProactiveEta({ route, plannedEta, traffic, weather });
-    onComplete(result);
-    setLoading(false);
+    toast.info("Recalculating ETA...");
+
+    try {
+      const result = await runProactiveEta({ route, plannedEta, traffic, weather });
+
+      if (result.riskLevel === "high") {
+        notify.risk(`High risk of delay for route: ${route}`, "high");
+      } else if (result.riskLevel === "medium") {
+        notify.risk(`Medium risk of delay for route: ${route}`, "medium");
+      } else {
+        notify.success("ETA recalculated successfully!");
+      }
+      onComplete(result);
+
+    } catch (err) {
+        notify.error(err instanceof Error ? err.message : "An unknown error occurred.");
+    } finally {
+        setLoading(false);
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Input
-        placeholder="Planned Route"
-        value={route}
-        onChange={(e) => setRoute(e.target.value)}
-        required
-      />
-      <Input
-        placeholder="Planned ETA (ISO format e.g. 2025-09-09T16:30:00Z)"
-        value={plannedEta}
-        onChange={(e) => setPlannedEta(e.target.value)}
-        required
-      />
-      <Textarea
-        placeholder="Traffic conditions"
-        value={traffic}
-        onChange={(e) => setTraffic(e.target.value)}
-        required
-      />
-      <Textarea
-        placeholder="Weather conditions"
-        value={weather}
-        onChange={(e) => setWeather(e.target.value)}
-        required
-      />
+      <div>
+        <label htmlFor="route" className="text-sm font-medium">Planned Route</label>
+        <Input
+            id="route"
+            placeholder="Planned Route"
+            value={route}
+            onChange={(e) => setRoute(e.target.value)}
+            required
+        />
+      </div>
+       <div>
+        <label htmlFor="eta" className="text-sm font-medium">Planned ETA</label>
+        <Input
+            id="eta"
+            placeholder="Planned ETA (ISO format e.g. 2025-09-09T16:30:00Z)"
+            value={plannedEta}
+            onChange={(e) => setPlannedEta(e.target.value)}
+            required
+        />
+       </div>
+      <div>
+        <label htmlFor="traffic" className="text-sm font-medium">Traffic Conditions</label>
+        <Textarea
+            id="traffic"
+            placeholder="Traffic conditions"
+            value={traffic}
+            onChange={(e) => setTraffic(e.target.value)}
+            required
+        />
+      </div>
+      <div>
+        <label htmlFor="weather" className="text-sm font-medium">Weather Conditions</label>
+        <Textarea
+            id="weather"
+            placeholder="Weather conditions"
+            value={weather}
+            onChange={(e) => setWeather(e.target.value)}
+            required
+        />
+      </div>
       <Button type="submit" disabled={loading} className="w-full">
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {loading ? "Calculating..." : "Recalculate ETA"}

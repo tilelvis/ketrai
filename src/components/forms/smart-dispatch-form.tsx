@@ -31,8 +31,8 @@ export function SmartDispatchForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      pickup: "475 10th Ave, New York, NY 10018",
-      dropoff: "1-3 E 109th St, New York, NY 10029",
+      pickup: "Jomo Kenyatta International Airport (JKIA), Nairobi",
+      dropoff: "Naivasha, Kenya",
     },
   });
 
