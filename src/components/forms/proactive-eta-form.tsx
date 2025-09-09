@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   courierSystemUpdate: z.string().min(1, "Required."),
@@ -26,6 +27,7 @@ const formSchema = z.object({
 export function ProactiveEtaForm() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ProactiveEtaCalculationOutput | null>(null);
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,9 +47,17 @@ export function ProactiveEtaForm() {
     try {
       const output = await proactiveEtaCalculation(values);
       setResult(output);
+      toast({
+        title: "ETA Calculated",
+        description: "A new ETA has been determined and a notification drafted.",
+      });
     } catch (error) {
       console.error(error);
-      // Here you would use a toast to show the error
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to calculate ETA. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
