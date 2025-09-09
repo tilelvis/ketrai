@@ -55,7 +55,9 @@ Input Data:
 Your Task:
 
 1.  Analyze the Data: Carefully review all provided information to understand the context of the claim (e.g., when it was damaged, what the item is).
-2.  Generate Claim Text: Write a clear, professional, and comprehensive claim description in natural language. This text should summarize the incident and justify the claim. Use clear, capitalized headers (e.g., "INCIDENT OVERVIEW:") instead of markdown like asterisks.
+2.  Generate Claim Text: Write a clear, professional, and comprehensive claim description in natural language. This text should summarize the incident and justify the claim.
+    - Use clear, capitalized headers (e.g., "INCIDENT OVERVIEW:").
+    - **Crucially, ensure each header and major piece of information is on its own line for readability.**
 3.  Generate Claim JSON: Create a structured JSON object representing the claim. It is critical that this JSON is well-formed.
 
 Output Format:
