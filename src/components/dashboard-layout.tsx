@@ -43,11 +43,18 @@ type DashboardLayoutProps = {
   children: ReactNode;
 };
 
+// In a real app, this would come from an auth context.
+// We'll simulate different roles here.
+type UserRole = 'dispatcher' | 'claims' | 'support';
+const currentUserRole: UserRole = 'dispatcher'; 
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const { isDeveloperMode, setIsDeveloperMode } = useDeveloper();
 
   const currentFlow = getFlowBySlug(pathname);
+  
+  const visibleFlows = aiFlows.filter(flow => flow.roles.includes(currentUserRole));
 
   return (
     <SidebarProvider>
@@ -60,7 +67,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {aiFlows.map((item) => (
+            {visibleFlows.map((item) => (
               <SidebarMenuItem key={item.slug}>
                 <Link href={item.slug}>
                   <SidebarMenuButton asChild isActive={pathname === item.slug}>
