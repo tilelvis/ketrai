@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, query, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Profile } from "@/store/profile";
 import { RoleGate } from "@/components/role-gate";
@@ -14,10 +14,110 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Users, Mail, Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { InviteForm } from "./invite-form";
 
+type Invite = {
+    id: string;
+    email: string;
+    role: Profile['role'];
+    status: "pending" | "accepted" | "expired";
+    token: string;
+    createdAt: Timestamp;
+    expiresAt: Timestamp;
+}
+
+
+function InvitesTable() {
+    const [invites, setInvites] = useState<Invite[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchInvites = useCallback(async () => {
+        setLoading(true);
+        try {
+            const q = query(collection(db, "invites"), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+            const data: Invite[] = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Invite));
+            setInvites(data);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "An unknown error occurred";
+            toast.error(`Failed to fetch invites: ${message}`);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchInvites();
+    }, [fetchInvites]);
+
+    const getStatusVariant = (status: Invite['status']) => {
+        switch (status) {
+            case 'pending': return 'secondary';
+            case 'accepted': return 'default';
+            case 'expired': return 'destructive';
+            default: return 'outline';
+        }
+    }
+
+    return (
+         <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <Mail className="h-5 w-5 text-primary" />
+                        <CardTitle>Sent Invites</CardTitle>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={fetchInvites} disabled={loading}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                {loading ? (
+                    <div className="space-y-2 p-4">
+                        {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                    </div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Created At</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {invites.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                                        No invites have been sent yet.
+                                    </TableCell>
+                                </TableRow>
+                            ) : invites.map((invite) => (
+                                <TableRow key={invite.id}>
+                                    <TableCell className="font-medium">{invite.email}</TableCell>
+                                    <TableCell className="capitalize">{invite.role}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={getStatusVariant(invite.status)} className="capitalize">
+                                            {invite.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        {invite.createdAt ? new Date(invite.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function UsersPage() {
     const [users, setUsers] = useState<Profile[]>([]);
@@ -74,11 +174,16 @@ export default function UsersPage() {
                 <Separator />
 
                 <InviteForm />
+                
+                <InvitesTable />
 
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center">
-                            <CardTitle>All Users</CardTitle>
+                            <div className="flex items-center gap-2">
+                                <Users className="h-5 w-5 text-primary" />
+                                <CardTitle>All Users</CardTitle>
+                            </div>
                             <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
                                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                                 Refresh
