@@ -3,7 +3,7 @@
  * This allows for dynamic generation of navigation and easy registration of new flows.
  */
 
-import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings, Users } from "lucide-react";
+import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings, Users, ClipboardList } from "lucide-react";
 
 export const aiFlows = [
   { 
@@ -36,6 +36,14 @@ export const aiFlows = [
     file: "automated-insurance-claim-draft",
     icon: FilePenLine,
     description: "Auto-draft insurance claims for damaged or lost packages.",
+    roles: ['claims', 'manager', 'admin'],
+  },
+    { 
+    name: "Claims History", 
+    slug: "/claims-history", 
+    file: "",
+    icon: ClipboardList,
+    description: "View and manage past insurance claims.",
     roles: ['claims', 'manager', 'admin'],
   },
   { 

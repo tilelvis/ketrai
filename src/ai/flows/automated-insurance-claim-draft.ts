@@ -10,6 +10,9 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
 
 const AutomatedInsuranceClaimDraftInputSchema = z.object({
   packageTrackingHistory: z.string().describe('Package tracking history from courier API.'),
@@ -76,6 +79,19 @@ const automatedInsuranceClaimDraftFlow = ai.defineFlow(
     if (!output) {
       throw new Error('No output from prompt');
     }
+
+    try {
+        await addDoc(collection(db, "claims"), {
+            ...output,
+            inputs: input,
+            createdAt: serverTimestamp(),
+        });
+    } catch (e) {
+        console.error("Failed to save claim to Firestore:", e);
+        // We don't want to fail the whole flow if saving fails,
+        // so we'll just log the error and continue.
+    }
+
     return output;
   }
 );
