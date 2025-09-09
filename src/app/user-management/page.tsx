@@ -132,17 +132,17 @@ function UserManagementTable() {
 
 export default function UserManagementPage() {
     return (
-        <RoleGate roles={['admin']}>
-            <div className="space-y-6">
-                <div className="space-y-1">
-                    <h1 className="text-2xl font-bold tracking-tight font-headline">User Management</h1>
-                    <p className="text-muted-foreground">
-                        Manage user roles and permissions across the application.
-                    </p>
-                </div>
-                <Separator />
-                <UserManagementTable />
+        <div className="space-y-6">
+            <div className="space-y-1">
+                <h1 className="text-2xl font-bold tracking-tight font-headline">User Management</h1>
+                <p className="text-muted-foreground">
+                    Manage user roles and permissions across the application.
+                </p>
             </div>
-        </RoleGate>
+            <Separator />
+            <RoleGate roles={['admin']}>
+                <UserManagementTable />
+            </RoleGate>
+        </div>
     );
 }
