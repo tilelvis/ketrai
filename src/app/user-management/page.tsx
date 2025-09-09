@@ -127,7 +127,6 @@ function UserManagementTable() {
                             ))}
                         </TableBody>
                     </Table>
-                </Table>
                 )}
             </CardContent>
         </Card>
