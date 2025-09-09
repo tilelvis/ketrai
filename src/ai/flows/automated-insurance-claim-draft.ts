@@ -82,7 +82,9 @@ const automatedInsuranceClaimDraftFlow = ai.defineFlow(
 
     try {
         await addDoc(collection(db, "claims"), {
-            ...output,
+            ...JSON.parse(output.claimDraftJson),
+            claimDraftText: output.claimDraftText,
+            claimDraftJson: output.claimDraftJson,
             inputs: input,
             createdAt: serverTimestamp(),
         });
