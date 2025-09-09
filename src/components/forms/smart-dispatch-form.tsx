@@ -4,6 +4,15 @@ import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    XAxis,
+    YAxis,
+    Tooltip,
+    ResponsiveContainer,
+  } from "recharts"
 
 import { smartDispatchRecommendation } from "@/ai/flows/smart-dispatch-recommendation";
 import type { SmartDispatchRecommendationOutput } from "@/ai/flows/smart-dispatch-recommendation";
@@ -16,6 +25,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Plus, Trash2, Lightbulb } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 const routeSchema = z.object({
   routeId: z.string().min(1),
@@ -76,10 +88,18 @@ export function SmartDispatchForm() {
   const handleReset = () => {
     setCurrentStep(0);
     setResult(null);
-    form.reset();
+    // form.reset(); // This would clear default values too, maybe not desired.
   }
   
   const progressValue = ((currentStep + 1) / steps.length) * 100;
+  
+  const chartData = result 
+    ? Object.entries(result.riskIndexScores).map(([route, score]) => ({
+        name: route,
+        score: score,
+        fill: route === result.optimalRoute ? 'hsl(var(--primary))' : 'hsl(var(--muted))'
+      }))
+    : [];
 
   return (
     <div className="space-y-6">
@@ -159,7 +179,7 @@ export function SmartDispatchForm() {
           <Card className="bg-secondary/50">
             <CardHeader>
               <CardTitle className="text-base font-headline">Assessment Result</CardTitle>
-              <CardDescription>AI-generated route recommendation.</CardDescription>
+              <CardDescription>AI-generated route recommendation and risk analysis.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
                 <div className="p-3 rounded-md bg-accent/50 border border-accent">
@@ -172,17 +192,17 @@ export function SmartDispatchForm() {
               </div>
               <Separator />
               <div>
-                  <p className="font-semibold mb-2">Risk Index Scores:</p>
-                  <div className="space-y-1">
-                  {Object.entries(result.riskIndexScores).map(([route, score]) => (
-                      <div key={route} className="flex justify-between items-center">
-                      <span>{route}</span>
-                      <div className="flex items-center gap-2">
-                        <Progress value={score} className="w-24 h-2"/>
-                        <span className="font-mono font-semibold text-right w-10">{score.toFixed(2)}</span>
-                      </div>
-                      </div>
-                  ))}
+                  <p className="font-semibold mb-2">Risk Index Comparison:</p>
+                  <div className="h-[150px]">
+                    <ChartContainer config={{}} className="h-full w-full">
+                        <BarChart data={chartData} accessibilityLayer>
+                            <CartesianGrid vertical={false} />
+                            <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
+                            <YAxis domain={[0, 100]} />
+                            <Tooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                            <Bar dataKey="score" radius={8} />
+                        </BarChart>
+                    </ChartContainer>
                   </div>
               </div>
             </CardContent>
