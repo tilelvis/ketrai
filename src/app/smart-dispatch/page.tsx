@@ -6,6 +6,7 @@ import { SmartDispatchForm } from "@/components/forms/smart-dispatch-form";
 import { SmartDispatchResult } from "@/components/results/smart-dispatch-result";
 import { Separator } from "@/components/ui/separator";
 import type { SmartDispatchRecommendationOutput } from "@/ai/flows/smart-dispatch-recommendation";
+import { Button } from "@/components/ui/button";
 
 export default function SmartDispatchPage() {
   const [result, setResult] = useState<SmartDispatchRecommendationOutput | null>(null);

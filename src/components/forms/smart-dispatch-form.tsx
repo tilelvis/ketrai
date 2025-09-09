@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-import { smartDispatchRecommendation } from "@/ai/flows/smart-dispatch-recommendation";
+import { runSmartDispatch } from "@/app/smart-dispatch/actions";
 import type { SmartDispatchRecommendationOutput } from "@/ai/flows/smart-dispatch-recommendation";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Route } from "lucide-react";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   pickup: z.string().min(1, "Pickup location is required."),
@@ -37,9 +38,16 @@ export function SmartDispatchForm({
 
   async function handleSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    const result = await smartDispatchRecommendation(values);
-    onComplete(result);
-    setLoading(false);
+    toast.info("Finding the best route...");
+    try {
+        const result = await runSmartDispatch(values);
+        onComplete(result);
+        toast.success("Optimal route found!");
+    } catch (error) {
+        toast.error(error instanceof Error ? error.message : "An unknown error occurred.");
+    } finally {
+        setLoading(false);
+    }
   }
 
   return (

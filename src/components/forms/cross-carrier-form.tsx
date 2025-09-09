@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { PlusCircle, ShieldAlert, XCircle, Loader2 } from "lucide-react";
+import { notify } from "@/lib/notify";
 
 export function CrossCarrierForm({ onComplete }: { onComplete: (result: CrossCarrierRiskVisibilityOutput) => void }) {
   const [shipments, setShipments] = useState<any[]>([
@@ -39,12 +40,29 @@ export function CrossCarrierForm({ onComplete }: { onComplete: (result: CrossCar
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const result = await runCrossCarrierVisibility({
-      shipments,
-      alerts: alerts.split("\n").filter(Boolean),
-    });
-    onComplete(result);
-    setLoading(false);
+    notify.info("Analyzing shipments...");
+
+    try {
+      const result = await runCrossCarrierVisibility({
+        shipments,
+        alerts: alerts.split("\n").filter(Boolean),
+      });
+
+      result.groupedRisks.forEach((risk: any) => {
+        if (risk.riskType.toLowerCase().includes("weather")) {
+          notify.risk(`Weather delay risk: ${risk.shipments.join(", ")}`, "medium");
+        } else if (risk.riskType.toLowerCase().includes("strike")) {
+          notify.risk(`Port strike risk: ${risk.shipments.join(", ")}`, "high");
+        }
+      });
+      
+      onComplete(result);
+      notify.success("Visibility report generated!");
+    } catch (err) {
+      notify.error(err instanceof Error ? err.message : "Failed to generate report.");
+    } finally {
+        setLoading(false);
+    }
   }
 
   return (
@@ -95,7 +113,7 @@ export function CrossCarrierForm({ onComplete }: { onComplete: (result: CrossCar
                     </div>
                     ))}
                     <Button type="button" variant="outline" size="sm" onClick={addShipment}>
-                        <PlusCircle className="mr-2" /> Add Shipment
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Shipment
                     </Button>
                 </div>
 

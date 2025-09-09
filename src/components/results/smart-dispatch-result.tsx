@@ -24,8 +24,8 @@ export function SmartDispatchResult({ data, onReset }: { data: SmartDispatchReco
             <div className="flex items-center gap-3">
                 <CheckCircle className="h-8 w-8 text-green-600" />
                 <div>
-                    <CardTitle className="font-headline text-lg text-green-900">Optimal Route Found</CardTitle>
-                    <CardDescription className="text-green-800">The AI has analyzed the routes and recommended the best option.</CardDescription>
+                    <CardTitle className="font-headline text-lg text-green-900 dark:text-green-300">Optimal Route Found</CardTitle>
+                    <CardDescription className="text-green-800 dark:text-green-400">The AI has analyzed the routes and recommended the best option.</CardDescription>
                 </div>
             </div>
         </CardHeader>

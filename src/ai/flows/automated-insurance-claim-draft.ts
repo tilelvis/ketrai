@@ -16,7 +16,7 @@ const AutomatedInsuranceClaimDraftInputSchema = z.object({
   damagePhotoDataUri: z
     .string()
     .describe(
-      "Damage photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "Damage photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'"
     )
     .optional(),
   productDetails: z.string().describe('Product details and value from e-commerce platform API.'),
@@ -59,12 +59,7 @@ Create a complete insurance claim draft using the following information. Your pr
 3.  **Generate Claim JSON:** Create a structured JSON object representing the claim. It is critical that this JSON is well-formed.
 
 **Output Format:**
-You must provide both a natural language text description and a JSON object. The JSON output must be enclosed in a markdown code block like this:
-\`\`\`json
-{
-  "key": "value"
-}
-\`\`\`
+You must provide both a natural language text description and a JSON object.
 `,
 });
 
@@ -79,14 +74,6 @@ const automatedInsuranceClaimDraftFlow = ai.defineFlow(
     if (!output) {
       throw new Error('No output from prompt');
     }
-
-    // Robustly extract JSON from the markdown block, even if the model adds extra text.
-    const jsonMatch = output.claimDraftJson.match(/```json\n([\s\S]*?)\n```/);
-    const claimDraftJson = jsonMatch ? jsonMatch[1] : output.claimDraftJson;
-
-    return {
-      ...output,
-      claimDraftJson,
-    };
+    return output;
   }
 );

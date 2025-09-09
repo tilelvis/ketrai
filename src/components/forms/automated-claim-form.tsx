@@ -8,7 +8,6 @@ import { z } from "zod";
 
 import { runAutomatedClaim } from "@/app/automated-claim/actions";
 import type { AutomatedInsuranceClaimDraftOutput } from "@/ai/flows/automated-insurance-claim-draft";
-import { useDeveloper } from "@/hooks/use-developer";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -16,8 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FilePenLine } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 
 const formSchema = z.object({
@@ -32,9 +30,6 @@ export function AutomatedClaimForm({
   onComplete: (result: AutomatedInsuranceClaimDraftOutput) => void;
 }) {
   const [loading, setLoading] = useState(false);
-  const { isDeveloperMode } = useDeveloper();
-  const { toast } = useToast();
-  const [devInfo, setDevInfo] = useState<any>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,29 +42,17 @@ export function AutomatedClaimForm({
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    setDevInfo(null);
+    toast.info("Generating insurance claim draft...");
     
     // In a real app, you would handle file uploads and convert the image to a Base64 data URI.
-    // For this demo, we'll use a placeholder if no data is provided.
     const inputs = {...values};
-    if (!inputs.damagePhotoDataUri) {
-      // a 1x1 red pixel as a placeholder
-      inputs.damagePhotoDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-    }
 
     try {
       const output = await runAutomatedClaim(inputs);
       onComplete(output);
-      if (isDeveloperMode) {
-        setDevInfo({ inputs, output });
-      }
+      toast.success("Claim draft generated successfully!");
     } catch (error) {
-       toast({
-        variant: "destructive",
-        title: "Claim Generation Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred.",
-      });
-      console.error(error);
+       toast.error(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
       setLoading(false);
     }
@@ -123,32 +106,6 @@ export function AutomatedClaimForm({
             </Form>
         </CardContent>
       </Card>
-
-      {isDeveloperMode && devInfo && (
-        <Card className="bg-secondary/30">
-           <Accordion type="single" collapsible>
-            <AccordionItem value="item-1" className="border-none">
-              <AccordionTrigger className="px-6 py-4 text-sm font-semibold">Developer Info</AccordionTrigger>
-              <AccordionContent className="px-6">
-                <div className="space-y-4 text-xs">
-                  <div>
-                    <h4 className="font-semibold mb-2">AI Inputs</h4>
-                    <pre className="rounded-md border bg-card p-3 overflow-x-auto">
-                      <code>{JSON.stringify(devInfo.inputs, null, 2)}</code>
-                    </pre>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-2">AI Output</h4>
-                    <pre className="rounded-md border bg-card p-3 overflow-x-auto">
-                      <code>{JSON.stringify(devInfo.output, null, 2)}</code>
-                    </pre>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </Card>
-      )}
     </div>
   );
 }

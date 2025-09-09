@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,20 +11,20 @@ export function ProactiveEtaResult({ data }: { data: ProactiveEtaCalculationOutp
     high: {
       card: "border-red-500/30 bg-red-500/10",
       icon: "text-red-600",
-      text: "text-red-900",
-      description: "text-red-800",
+      text: "text-red-900 dark:text-red-300",
+      description: "text-red-800 dark:text-red-400",
     },
     medium: {
       card: "border-amber-500/30 bg-amber-500/10",
       icon: "text-amber-600",
-      text: "text-amber-900",
-      description: "text-amber-800",
+      text: "text-amber-900 dark:text-amber-300",
+      description: "text-amber-800 dark:text-amber-400",
     },
     low: {
         card: "border-emerald-500/30 bg-emerald-500/10",
         icon: "text-emerald-600",
-        text: "text-emerald-900",
-        description: "text-emerald-800",
+        text: "text-emerald-900 dark:text-emerald-300",
+        description: "text-emerald-800 dark:text-emerald-400",
     },
   };
 
@@ -54,8 +55,8 @@ export function ProactiveEtaResult({ data }: { data: ProactiveEtaCalculationOutp
                 Updated ETA
             </div>
         </CardHeader>
-        <CardContent className="text-2xl font-bold">
-            {new Date(data.recalculatedEta).toLocaleString()}
+        <CardContent>
+           <p className="text-2xl font-bold">{new Date(data.recalculatedEta).toLocaleString()}</p>
         </CardContent>
       </Card>
 
