@@ -22,15 +22,14 @@ function UserManagementTable() {
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
-        try {
-            const userList = await getUsers();
-            setUsers(userList);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            toast.error(`Failed to fetch users: ${message}`);
-        } finally {
-            setLoading(false);
+        const result = await getUsers();
+        if (result.success) {
+            setUsers(result.users || []);
+        } else {
+            toast.error(result.error);
+            setUsers([]);
         }
+        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -41,7 +40,7 @@ function UserManagementTable() {
         setUpdating(prev => ({ ...prev, [uid]: true }));
         const result = await updateUserRole(uid, newRole);
         if (result.success) {
-            toast.success("User role updated successfully.");
+            toast.success("User role updated successfully. The user may need to log out and back in for changes to fully apply.");
             setUsers(users.map(u => u.uid === uid ? { ...u, role: newRole } : u));
         } else {
             toast.error(result.error);
@@ -81,50 +80,55 @@ function UserManagementTable() {
                 </div>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Role</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {users.map(user => (
-                            <TableRow key={user.uid}>
-                                <TableCell>
-                                    <div className="flex items-center gap-3">
-                                        <Avatar>
-                                            <AvatarImage src={user.photoURL} alt={user.name} />
-                                            <AvatarFallback>{user.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-medium">{user.name}</p>
-                                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Select
-                                        value={user.role}
-                                        onValueChange={(newRole) => handleRoleChange(user.uid, newRole as Profile['role'])}
-                                        disabled={updating[user.uid]}
-                                    >
-                                        <SelectTrigger className="w-[180px]">
-                                            <SelectValue placeholder="Select role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="dispatcher">Dispatcher</SelectItem>
-                                            <SelectItem value="manager">Manager</SelectItem>
-                                            <SelectItem value="claims">Claims Officer</SelectItem>
-                                            <SelectItem value="support">Support</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </TableCell>
+                {users.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No users found. This might be due to permissions issues.</p>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>User</TableHead>
+                                <TableHead>Role</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
+                        </TableHeader>
+                        <TableBody>
+                            {users.map(user => (
+                                <TableRow key={user.uid}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar>
+                                                <AvatarImage src={user.photoURL} alt={user.name} />
+                                                <AvatarFallback>{user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="font-medium">{user.name}</p>
+                                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Select
+                                            value={user.role}
+                                            onValueChange={(newRole) => handleRoleChange(user.uid, newRole as Profile['role'])}
+                                            disabled={updating[user.uid]}
+                                        >
+                                            <SelectTrigger className="w-[180px]">
+                                                <SelectValue placeholder="Select role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="dispatcher">Dispatcher</SelectItem>
+                                                <SelectItem value="manager">Manager</SelectItem>
+                                                <SelectItem value="claims">Claims Officer</SelectItem>
+                                                <SelectItem value="support">Support</SelectItem>
+                                                <SelectItem value="admin">Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </Table>
+                )}
             </CardContent>
         </Card>
     )
