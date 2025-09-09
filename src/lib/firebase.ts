@@ -17,25 +17,17 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 
 export async function fetchUserProfile(user: User) {
+  if (!user) return null;
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    // create default profile
-    const profile = {
-      uid: user.uid,
-      email: user.email,
-      name: user.displayName ?? "New User",
-      role: "dispatcher",
-      theme: "system",
-      createdAt: new Date().toISOString(),
-      photoURL: user.photoURL ?? "",
-    };
-    await setDoc(ref, profile);
-    return profile;
+    // Return null if the profile doesn't exist; creation is handled on signup.
+    console.log(`Profile for ${user.uid} does not exist.`);
+    return null;
   }
 
   return snap.data();
 }
 
-export { onAuthStateChanged };
+export { onAuthStateChanged, setDoc, doc };

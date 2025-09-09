@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -10,7 +11,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationCenter } from "@/components/notification-center";
 import { useEffect, useState } from "react";
 import { useNotificationStore } from "@/store/notifications";
-import { onAuthStateChanged, auth, fetchUserProfile } from "@/lib/firebase";
+import { onAuthStateChanged, auth, fetchUserProfile, db, doc, setDoc } from "@/lib/firebase";
 import { useProfileStore } from "@/store/profile";
 import { ProfileMenu } from "./profile-menu";
 
@@ -26,8 +27,26 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        const profileData = await fetchUserProfile(user);
+        let profileData = await fetchUserProfile(user);
+        // If profile doesn't exist, it might be a login for a user created
+        // before the signup-creation logic was in place. Create it now.
+        if (!profileData) {
+            console.log("Profile not found for existing user, creating one now.");
+            const newProfile = {
+              uid: user.uid,
+              email: user.email,
+              name: user.displayName ?? user.email?.split('@')[0] ?? "New User",
+              role: "dispatcher",
+              theme: "system",
+              createdAt: new Date().toISOString(),
+              photoURL: user.photoURL ?? "",
+            };
+            await setDoc(doc(db, "users", user.uid), newProfile);
+            profileData = newProfile;
+        }
+
         setProfile(profileData as any);
+
       } else {
         setProfile(null);
         if (pathname !== '/login') {

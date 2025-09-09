@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db, setDoc, doc } from "@/lib/firebase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +30,21 @@ export default function LoginPage() {
 
     try {
       if (isSignup) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Create user profile document immediately after signup
+        const profile = {
+          uid: user.uid,
+          email: user.email,
+          name: user.email?.split('@')[0] ?? "New User",
+          role: "dispatcher",
+          theme: "system",
+          createdAt: new Date().toISOString(),
+          photoURL: user.photoURL ?? "",
+        };
+        await setDoc(doc(db, "users", user.uid), profile);
+
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
