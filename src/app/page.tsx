@@ -6,9 +6,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Timer, AlertCircle, Package, Truck, ShieldX } from "lucide-react";
-import { ProactiveEtaForm } from "@/components/forms/proactive-eta-form";
+import { AlertCircle, Package, Truck, ShieldX } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { aiFlows } from "@/ai/flowRegistry";
 
 export default function Home() {
   return (
@@ -17,7 +19,7 @@ export default function Home() {
         <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight font-headline">Dashboard</h1>
             <p className="text-muted-foreground">
-                An overview of your supply chain operations.
+                An overview of your supply chain operations and AI-powered workflows.
             </p>
         </div>
         <Separator />
@@ -79,16 +81,31 @@ export default function Home() {
         </div>
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-medium font-headline">
-                <Timer className="h-5 w-5 text-muted-foreground" />
-                Proactive ETA Calculator
+              <CardTitle className="text-lg font-medium font-headline">
+                AI Workflows
               </CardTitle>
               <CardDescription className="pt-2">
-                Recalculate ETAs based on real-time traffic and weather data.
+                Select an AI-powered tool to streamline your supply chain operations.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ProactiveEtaForm />
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              {aiFlows.filter(f => f.slug !== '/').map(flow => (
+                <Link href={flow.slug} key={flow.slug} legacyBehavior>
+                  <a className="block h-full">
+                    <Card className="hover:border-primary hover:bg-primary/5 h-full transition-colors">
+                      <CardHeader>
+                        <div className="flex items-center gap-3">
+                          <flow.icon className="h-6 w-6 text-primary" />
+                          <CardTitle className="text-base font-semibold">{flow.name}</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{flow.description}</p>
+                      </CardContent>
+                    </Card>
+                  </a>
+                </Link>
+              ))}
             </CardContent>
           </Card>
       </div>

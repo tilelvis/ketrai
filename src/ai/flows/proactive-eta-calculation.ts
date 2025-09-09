@@ -12,24 +12,18 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ProactiveEtaCalculationInputSchema = z.object({
-  courierSystemUpdate: z
-    .string()
-    .describe('The update from the courier system, should be \'Out for Delivery\'.'),
-  plannedRoute: z.string().describe('The planned route from Google Maps.'),
-  travelTime: z.string().describe('The travel time from Google Maps.'),
-  trafficData: z.string().describe('Real-time traffic data from traffic API.'),
-  weatherData: z.string().describe('Weather forecast for the delivery area from weather API.'),
-  scheduledTime: z.string().describe('The scheduled delivery time.'),
+  route: z.string().describe("The planned delivery route."),
+  plannedEta: z.string().describe("The original planned ETA in ISO datetime format."),
+  traffic: z.string().describe("Current real-time traffic conditions."),
+  weather: z.string().describe("Current real-time weather conditions."),
 });
 export type ProactiveEtaCalculationInput = z.infer<typeof ProactiveEtaCalculationInputSchema>;
 
 const ProactiveEtaCalculationOutputSchema = z.object({
-  updatedEta: z.string().describe('The updated estimated time of arrival (ETA).'),
-  smsText: z.string().describe('Customer-friendly SMS notification text.'),
-  developerInfo: z.object({
-    prompt: z.string(),
-    rawOutput: z.string(),
-  }).optional(),
+  recalculatedEta: z.string().describe('The updated estimated time of arrival (ETA) in ISO datetime format.'),
+  riskLevel: z.enum(["low", "medium", "high"]).describe("The assessed risk of delay."),
+  customerMessage: z.string().describe('A customer-friendly SMS notification text.'),
+  explanation: z.string().describe("A brief explanation for the dispatcher about why the ETA was changed."),
 });
 export type ProactiveEtaCalculationOutput = z.infer<typeof ProactiveEtaCalculationOutputSchema>;
 
@@ -39,14 +33,25 @@ export async function proactiveEtaCalculation(
   return proactiveEtaCalculationFlow(input);
 }
 
-const proactiveEtaCalculationPrompt = ai.definePrompt({
+const prompt = ai.definePrompt({
   name: 'proactiveEtaCalculationPrompt',
   input: {schema: ProactiveEtaCalculationInputSchema},
-  output: {schema: z.object({
-    updatedEta: z.string().describe('The updated estimated time of arrival (ETA).'),
-    smsText: z.string().describe('Customer-friendly SMS notification text.'),
-  })},
-  prompt: `Given the planned route: {{{plannedRoute}}}, current traffic: {{{trafficData}}}, and weather forecast: {{{weatherData}}}, analyze the risk of delay for a delivery scheduled at {{{scheduledTime}}}. Recalculate a realistic ETA. Draft a concise, friendly SMS notification for the customer. Updated ETA (timestamp) Customer-friendly SMS text`,
+  output: {schema: ProactiveEtaCalculationOutputSchema},
+  prompt: `You are a last-mile delivery assistant.
+
+Context:
+- Route: {{{route}}}
+- Planned ETA: {{{plannedEta}}}
+- Traffic: {{{traffic}}}
+- Weather: {{{weather}}}
+
+Task:
+1. Recalculate a realistic ETA given the conditions.
+2. Assess delay risk (low, medium, high).
+3. Draft a concise, friendly SMS notification for the customer.
+4. Provide a short explanation for dispatchers.
+
+Output in JSON matching the schema.`,
 });
 
 const proactiveEtaCalculationFlow = ai.defineFlow(
@@ -56,18 +61,7 @@ const proactiveEtaCalculationFlow = ai.defineFlow(
     outputSchema: ProactiveEtaCalculationOutputSchema,
   },
   async input => {
-    const {output, history} = await proactiveEtaCalculationPrompt(input);
-    
-    // Extract the raw prompt and output from the history for debugging.
-    const prompt = history?.[0]?.request?.messages?.[0]?.content[0].text || "Prompt not available";
-    const rawOutput = history?.[0]?.response?.candidates?.[0]?.message?.content[0].text || "Output not available";
-    
-    return {
-        ...output!,
-        developerInfo: {
-            prompt,
-            rawOutput
-        }
-    };
+    const {output} = await prompt(input);
+    return output!;
   }
 );
