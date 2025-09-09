@@ -28,8 +28,8 @@ export async function fetchUserProfile(user: User) {
       name: user.displayName ?? "New User",
       role: "dispatcher",
       theme: "system",
-      createdAt: Date.now(),
-      photoURL: user.photoURL
+      createdAt: new Date().toISOString(),
+      photoURL: user.photoURL ?? "",
     };
     await setDoc(ref, profile);
     return profile;

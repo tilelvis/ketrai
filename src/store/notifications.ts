@@ -1,7 +1,7 @@
 
 
 import { create } from "zustand";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import {
   addDoc,
   collection,
@@ -16,6 +16,7 @@ import {
 
 export type Notification = {
   id: string;
+  uid: string; // User ID of the creator
   message: string;
   type: "success" | "warning" | "error" | "info" | "risk";
   category: "dispatch" | "eta" | "claims" | "cross-carrier" | "system";
@@ -25,7 +26,7 @@ export type Notification = {
 
 type NotificationStore = {
   notifications: Notification[];
-  add: (n: Omit<Notification, "id" | "timestamp">) => Promise<void>;
+  add: (n: Omit<Notification, "id" | "timestamp" | "uid">) => Promise<void>;
   remove: (id: string) => Promise<void>;
   clear: () => Promise<void>;
   subscribe: () => () => void; // Returns an unsubscribe function
@@ -35,9 +36,15 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
 
   add: async (n) => {
+    const user = auth.currentUser;
+    if (!user) {
+        console.error("Cannot add notification. User not authenticated.");
+        return;
+    }
     try {
       await addDoc(collection(db, "notifications"), {
         ...n,
+        uid: user.uid,
         timestamp: serverTimestamp(),
       });
     } catch (error) {
