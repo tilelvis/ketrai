@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MailPlus, Loader2 } from "lucide-react";
 import type { Profile } from "@/store/profile";
+import { useProfileStore } from "@/store/profile";
 
 
 function generateToken() {
@@ -22,6 +23,7 @@ function generateToken() {
 
 
 export function InviteForm() {
+  const { profile } = useProfileStore();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Profile["role"]>("dispatcher");
   const [loading, setLoading] = useState(false);
@@ -31,6 +33,11 @@ export function InviteForm() {
         toast.error("Please enter an email address.");
         return;
     }
+    if (!profile) {
+        toast.error("Could not identify the sending admin. Please refresh and try again.");
+        return;
+    }
+
     setLoading(true);
     toast.info("Sending invite...");
 
@@ -45,6 +52,10 @@ export function InviteForm() {
         token,
         createdAt: serverTimestamp(),
         expiresAt,
+        invitedBy: {
+            name: profile.name,
+            email: profile.email,
+        }
       });
 
       const inviteLink = `${window.location.origin}/invite/${token}`;
