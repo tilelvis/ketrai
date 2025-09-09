@@ -1,16 +1,17 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { DashboardLayout } from "@/components/dashboard-layout";
-import { FilePenLine } from "lucide-react";
+
+"use client";
+
+import { useState } from "react";
 import { AutomatedClaimForm } from "@/components/forms/automated-claim-form";
+import { AutomatedClaimResult } from "@/components/results/automated-claim-result";
+import { DashboardLayout } from "@/components/dashboard-layout";
 import { Separator } from "@/components/ui/separator";
+import type { AutomatedInsuranceClaimDraftOutput } from "@/ai/flows/automated-insurance-claim-draft";
+import { Button } from "@/components/ui/button";
 
 export default function AutomatedClaimPage() {
+  const [result, setResult] = useState<AutomatedInsuranceClaimDraftOutput | null>(null);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -21,18 +22,17 @@ export default function AutomatedClaimPage() {
             </p>
         </div>
         <Separator />
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium font-headline">Automated Insurance Claim</CardTitle>
-              <FilePenLine className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="mb-4">
-                Auto-draft insurance claims for damaged or lost packages.
-              </CardDescription>
-              <AutomatedClaimForm />
-            </CardContent>
-          </Card>
+        
+        {!result ? (
+          <AutomatedClaimForm onComplete={setResult} />
+        ) : (
+          <div className="space-y-4">
+            <AutomatedClaimResult data={result} />
+            <Button onClick={() => setResult(null)} variant="outline" className="w-full">
+              Start New Claim
+            </Button>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

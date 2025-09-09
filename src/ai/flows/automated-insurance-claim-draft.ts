@@ -43,13 +43,29 @@ const prompt = ai.definePrompt({
   name: 'automatedInsuranceClaimDraftPrompt',
   input: {schema: AutomatedInsuranceClaimDraftInputSchema},
   output: {schema: AutomatedInsuranceClaimDraftOutputSchema},
-  prompt: `Create a complete insurance claim draft using the following data:
+  prompt: `You are an expert insurance claims assistant for a logistics company.
 
-* Tracking history: {{{packageTrackingHistory}}}
-* Item description & value: {{{productDetails}}}
-* Evidence (photos, notes): {{#if damagePhotoDataUri}}{{media url=damagePhotoDataUri}}{{else}}No photo provided{{/if}}
+Create a complete insurance claim draft using the following information. Your primary goal is to generate a structured, accurate, and professional claim that can be reviewed and submitted with minimal changes.
 
-Format the claim in clear, structured text and JSON. The JSON output should be enclosed in a \`\`\`json... \`\`\` block.`,
+**Input Data:**
+- **Package Tracking History:** {{{packageTrackingHistory}}}
+- **Product Details & Value:** {{{productDetails}}}
+- **Photo Evidence of Damage:** {{#if damagePhotoDataUri}}{{media url=damagePhotoDataUri}}{{else}}No photo evidence was provided.{{/if}}
+
+**Your Task:**
+
+1.  **Analyze the Data:** Carefully review all provided information to understand the context of the claim (e.g., when it was damaged, what the item is).
+2.  **Generate Claim Text:** Write a clear, professional, and comprehensive claim description in natural language. This text should summarize the incident and justify the claim.
+3.  **Generate Claim JSON:** Create a structured JSON object representing the claim. It is critical that this JSON is well-formed.
+
+**Output Format:**
+You must provide both a natural language text description and a JSON object. The JSON output must be enclosed in a markdown code block like this:
+\`\`\`json
+{
+  "key": "value"
+}
+\`\`\`
+`,
 });
 
 const automatedInsuranceClaimDraftFlow = ai.defineFlow(
@@ -64,8 +80,8 @@ const automatedInsuranceClaimDraftFlow = ai.defineFlow(
       throw new Error('No output from prompt');
     }
 
-    // Extract JSON from the markdown block
-    const jsonMatch = output.claimDraftJson.match(/```json\n([\s\S]*)\n```/);
+    // Robustly extract JSON from the markdown block, even if the model adds extra text.
+    const jsonMatch = output.claimDraftJson.match(/```json\n([\s\S]*?)\n```/);
     const claimDraftJson = jsonMatch ? jsonMatch[1] : output.claimDraftJson;
 
     return {
