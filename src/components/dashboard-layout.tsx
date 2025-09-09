@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -14,7 +13,6 @@ import { useNotificationStore } from "@/store/notifications";
 import { onAuthStateChanged, auth, fetchUserProfile } from "@/lib/firebase";
 import { useProfileStore } from "@/store/profile";
 import { ProfileMenu } from "./profile-menu";
-import { RoleGate } from "./role-gate";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
