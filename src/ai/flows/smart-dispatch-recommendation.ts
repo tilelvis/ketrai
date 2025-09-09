@@ -29,11 +29,11 @@ export type SmartDispatchRecommendationInput = z.infer<
 >;
 
 const SmartDispatchRecommendationOutputSchema = z.object({
-  optimalRoute: z.string().describe('Recommended optimal route (geo-coordinates / route ID).'),
+  optimalRoute: z.string().describe('The routeId of the recommended optimal route.'),
   riskIndexScores: z
     .record(z.string(), z.number())
-    .describe('Risk index score for all routes.'),
-  explanation: z.string().describe('Explanation of why the route is optimal.'),
+    .describe('A risk index score for each route, from 0 to 100. The key should be the routeId.'),
+  explanation: z.string().describe('A concise, one-sentence explanation of why the recommended route is optimal, focusing on the most critical factors.'),
 });
 export type SmartDispatchRecommendationOutput = z.infer<
   typeof SmartDispatchRecommendationOutputSchema
@@ -49,16 +49,20 @@ const prompt = ai.definePrompt({
   name: 'smartDispatchRecommendationPrompt',
   input: {schema: SmartDispatchRecommendationInputSchema},
   output: {schema: SmartDispatchRecommendationOutputSchema},
-  prompt: `For each route, calculate a risk index considering time delays, safety risks, and disruptions using the following data:
+  prompt: `You are a logistics expert. Analyze the provided routes and risk data to recommend the safest and most efficient dispatch option.
 
-Routes: {{routes}}
-Theft Hotspot Data: {{theftHotspotData}}
-Real-time Traffic Data: {{realTimeTrafficData}}
-Local Event Data: {{localEventData}}
+Analyze each route based on the following data:
+- Routes: {{{json routes}}}
+- Theft Hotspot Data: {{{theftHotspotData}}}
+- Real-time Traffic Data: {{{realTimeTrafficData}}}
+- Local Event Data: {{{localEventData}}}
 
-Recommend the optimal route and explain why in one sentence.
+Your task:
+1. For each route, calculate a risk index score from 0 (lowest risk) to 100 (highest risk). Consider all factors: travel time, traffic delays, safety risks (theft), and potential disruptions from local events.
+2. Identify the route with the lowest overall risk index as the "optimalRoute".
+3. Provide a brief, one-sentence "explanation" justifying your choice. Highlight the most significant advantage of the optimal route (e.g., "it avoids the major traffic jam on FDR Drive" or "it bypasses the high-theft zone around 42nd St").
 
-Return the optimal route (routeId), risk index scores (a map of routeId to risk score), and explanation.
+Return a JSON object with the optimal route's ID, a key-value map of all route IDs to their risk scores, and the explanation.
 `,
 });
 
