@@ -3,7 +3,7 @@
  * This allows for dynamic generation of navigation and easy registration of new flows.
  */
 
-import { FilePenLine, Home, Route, ShieldAlert } from "lucide-react";
+import { FilePenLine, Home, Route, ShieldAlert, Timer } from "lucide-react";
 
 export const aiFlows = [
   { 
@@ -13,6 +13,14 @@ export const aiFlows = [
     icon: Home,
     description: "AI-Powered Workflows for supply chain orchestration.",
     roles: ['dispatcher', 'claims', 'support'],
+  },
+  {
+    name: "Proactive ETA",
+    slug: "/proactive-eta",
+    file: "proactive-eta-calculation",
+    icon: Timer,
+    description: "Recalculate delivery ETAs in real-time using traffic and weather.",
+    roles: ['dispatcher', 'support'],
   },
   { 
     name: "Smart Dispatch", 
