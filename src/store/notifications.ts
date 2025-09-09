@@ -16,6 +16,7 @@ export type Notification = {
   id: string;
   message: string;
   type: "success" | "warning" | "error" | "info" | "risk";
+  category: "dispatch" | "eta" | "claims" | "cross-carrier" | "system";
   severity?: "low" | "medium" | "high";
   timestamp: any; // Firestore timestamp object
 };

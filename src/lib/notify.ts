@@ -1,33 +1,37 @@
 
 import { toast } from "sonner";
-import { useNotificationStore } from "@/store/notifications";
+import { useNotificationStore, Notification } from "@/store/notifications";
 
 export const notify = {
-  success: (msg: string) => {
+  success: (msg: string, category: Notification["category"] = "system") => {
     toast.success(msg);
-    useNotificationStore.getState().add({ message: msg, type: "success" });
+    useNotificationStore.getState().add({ message: msg, type: "success", category });
   },
-  warning: (msg: string) => {
+  warning: (msg: string, category: Notification["category"] = "system") => {
     toast.warning(msg);
-    useNotificationStore.getState().add({ message: msg, type: "warning" });
+    useNotificationStore.getState().add({ message: msg, type: "warning", category });
   },
-  error: (msg: string) => {
+  error: (msg: string, category: Notification["category"] = "system") => {
     toast.error(msg);
-    useNotificationStore.getState().add({ message: msg, type: "error" });
+    useNotificationStore.getState().add({ message: msg, type: "error", category });
   },
-  info: (msg: string) => {
+  info: (msg: string, category: Notification["category"] = "system") => {
     toast.info(msg);
-    useNotificationStore.getState().add({ message: msg, type: "info" });
+    useNotificationStore.getState().add({ message: msg, type: "info", category });
   },
-  risk: (msg: string, severity: "low" | "medium" | "high") => {
+  risk: (
+    msg: string,
+    severity: "low" | "medium" | "high",
+    category: Notification["category"] = "system"
+  ) => {
     const toastMethod = {
-        low: toast.info,
-        medium: toast.warning,
-        high: toast.error,
-    }
+      low: toast.info,
+      medium: toast.warning,
+      high: toast.error,
+    };
     toastMethod[severity](msg, {
       duration: severity === "high" ? 8000 : 4000,
     });
-    useNotificationStore.getState().add({ message: msg, type: "risk", severity });
+    useNotificationStore.getState().add({ message: msg, type: "risk", severity, category });
   },
 };

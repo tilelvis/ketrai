@@ -41,7 +41,7 @@ export function CrossCarrierForm({ onComplete }: { onComplete: (result: CrossCar
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    notify.info("Analyzing shipments...");
+    notify.info("Analyzing shipments...", "cross-carrier");
 
     try {
       const result = await runCrossCarrierVisibility({
@@ -51,16 +51,16 @@ export function CrossCarrierForm({ onComplete }: { onComplete: (result: CrossCar
 
       result.groupedRisks.forEach((risk: any) => {
         if (risk.riskType.toLowerCase().includes("weather")) {
-          notify.risk(`Weather delay risk: ${risk.shipments.join(", ")}`, "medium");
+          notify.risk(`Weather delay risk: ${risk.shipments.join(", ")}`, "medium", "cross-carrier");
         } else if (risk.riskType.toLowerCase().includes("strike")) {
-          notify.risk(`Port strike risk: ${risk.shipments.join(", ")}`, "high");
+          notify.risk(`Port strike risk: ${risk.shipments.join(", ")}`, "high", "cross-carrier");
         }
       });
       
       onComplete(result);
-      notify.success("Visibility report generated!");
+      notify.success("Visibility report generated!", "cross-carrier");
     } catch (err) {
-      notify.error(err instanceof Error ? err.message : "Failed to generate report.");
+      notify.error(err instanceof Error ? err.message : "Failed to generate report.", "cross-carrier");
     } finally {
         setLoading(false);
     }

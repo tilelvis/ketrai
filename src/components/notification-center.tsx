@@ -6,17 +6,28 @@ import { useNotificationStore, Notification } from "@/store/notifications";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 function formatTimestamp(timestamp: any): string {
-    if (!timestamp || !timestamp.toDate) {
-      return new Date().toLocaleTimeString();
-    }
-    return timestamp.toDate().toLocaleTimeString();
+  if (!timestamp || !timestamp.toDate) {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+
+const categories: Notification['category'][] = ["dispatch", "eta", "claims", "cross-carrier", "system"];
 
 export function NotificationCenter() {
   const { notifications, remove, clear } = useNotificationStore();
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<string>("all");
 
   const typeColors = {
     error: "bg-red-600",
@@ -25,12 +36,17 @@ export function NotificationCenter() {
     info: "bg-blue-600",
     risk: "bg-fuchsia-600",
   };
-  
+
   const riskColors = {
     high: "bg-red-600",
     medium: "bg-yellow-500",
     low: "bg-blue-500",
-  }
+  };
+  
+  const filtered =
+    filter === "all"
+      ? notifications
+      : notifications.filter((n) => n.category === filter);
 
   return (
     <div className="relative">
@@ -43,7 +59,7 @@ export function NotificationCenter() {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+            className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
           >
             {notifications.length}
           </motion.div>
@@ -56,7 +72,7 @@ export function NotificationCenter() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute right-0 mt-2 w-80 rounded-lg border bg-popover shadow-xl z-50"
+            className="absolute right-0 mt-2 w-80 rounded-lg border bg-popover shadow-xl z-50 text-foreground"
           >
             <div className="flex items-center justify-between p-3 border-b">
               <h3 className="text-sm font-semibold">Notifications</h3>
@@ -69,12 +85,29 @@ export function NotificationCenter() {
                 </button>
               )}
             </div>
+            
+            <div className="p-2 border-b">
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="w-full h-8 text-xs">
+                    <SelectValue placeholder="Filter by category..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <Separator className="my-1"/>
+                    {categories.map((c) => (
+                         <SelectItem key={c} value={c} className="capitalize">
+                            {c}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
+              {filtered.length === 0 ? (
                 <p className="p-4 text-sm text-center text-muted-foreground">No new notifications</p>
               ) : (
-                notifications.map((n: Notification) => (
+                filtered.map((n: Notification) => (
                   <motion.div
                     key={n.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -90,8 +123,8 @@ export function NotificationCenter() {
                     />
                     <div className="flex-1">
                       <p className="text-sm">{n.message}</p>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTimestamp(n.timestamp)}
+                      <span className="text-xs text-muted-foreground uppercase">
+                        {n.category} &bull; {formatTimestamp(n.timestamp)}
                       </span>
                     </div>
                     <button onClick={() => remove(n.id)} className="p-1 text-muted-foreground hover:text-destructive rounded-full">
