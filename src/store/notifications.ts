@@ -66,10 +66,14 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
     if (!user || notifications.length === 0) return;
 
-    // Filter for notifications created by the current user
-    const userNotifications = notifications.filter(n => n.uid === user.uid);
-    if (userNotifications.length === 0) return;
-
+    // Filter for notifications that have a UID and belong to the current user.
+    // This prevents trying to delete old notifications that are missing a UID.
+    const userNotifications = notifications.filter(n => n.uid && n.uid === user.uid);
+    if (userNotifications.length === 0) {
+      console.warn("No notifications found for the current user to clear.");
+      return;
+    }
+    
     const batch = writeBatch(db);
     userNotifications.forEach((n) => {
       const docRef = doc(db, "notifications", n.id);
