@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/sidebar';
 import {
   Bell,
+  Code,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -27,9 +28,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import { Logo } from '@/components/icons';
 import { aiFlows, getFlowBySlug } from '@/ai/flowRegistry';
+import { Label } from './ui/label';
+import { Switch } from './ui/switch';
+import { useDeveloper } from '@/hooks/use-developer';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -37,6 +45,7 @@ type DashboardLayoutProps = {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const { isDeveloperMode, setIsDeveloperMode } = useDeveloper();
 
   const currentFlow = getFlowBySlug(pathname);
 
@@ -103,6 +112,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem>Support</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Code className="mr-2 h-4 w-4" />
+                    <span>Developer Settings</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      <div className="flex items-center space-x-2 p-2">
+                        <Switch
+                          id="developer-mode"
+                          checked={isDeveloperMode}
+                          onCheckedChange={setIsDeveloperMode}
+                        />
+                        <Label htmlFor="developer-mode" className='text-sm'>Developer Mode</Label>
+                      </div>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Logout</DropdownMenuItem>
               </DropdownMenuContent>

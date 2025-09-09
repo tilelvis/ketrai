@@ -26,6 +26,10 @@ export type ProactiveEtaCalculationInput = z.infer<typeof ProactiveEtaCalculatio
 const ProactiveEtaCalculationOutputSchema = z.object({
   updatedEta: z.string().describe('The updated estimated time of arrival (ETA).'),
   smsText: z.string().describe('Customer-friendly SMS notification text.'),
+  developerInfo: z.object({
+    prompt: z.string(),
+    rawOutput: z.string(),
+  }).optional(),
 });
 export type ProactiveEtaCalculationOutput = z.infer<typeof ProactiveEtaCalculationOutputSchema>;
 
@@ -38,7 +42,10 @@ export async function proactiveEtaCalculation(
 const proactiveEtaCalculationPrompt = ai.definePrompt({
   name: 'proactiveEtaCalculationPrompt',
   input: {schema: ProactiveEtaCalculationInputSchema},
-  output: {schema: ProactiveEtaCalculationOutputSchema},
+  output: {schema: z.object({
+    updatedEta: z.string().describe('The updated estimated time of arrival (ETA).'),
+    smsText: z.string().describe('Customer-friendly SMS notification text.'),
+  })},
   prompt: `Given the planned route: {{{plannedRoute}}}, current traffic: {{{trafficData}}}, and weather forecast: {{{weatherData}}}, analyze the risk of delay for a delivery scheduled at {{{scheduledTime}}}. Recalculate a realistic ETA. Draft a concise, friendly SMS notification for the customer. Updated ETA (timestamp) Customer-friendly SMS text`,
 });
 
@@ -49,7 +56,18 @@ const proactiveEtaCalculationFlow = ai.defineFlow(
     outputSchema: ProactiveEtaCalculationOutputSchema,
   },
   async input => {
-    const {output} = await proactiveEtaCalculationPrompt(input);
-    return output!;
+    const {output, history} = await proactiveEtaCalculationPrompt(input);
+    
+    // Extract the raw prompt and output from the history for debugging.
+    const prompt = history?.[0]?.request?.messages?.[0]?.content[0].text || "Prompt not available";
+    const rawOutput = history?.[0]?.response?.candidates?.[0]?.message?.content[0].text || "Output not available";
+    
+    return {
+        ...output!,
+        developerInfo: {
+            prompt,
+            rawOutput
+        }
+    };
   }
 );
