@@ -28,14 +28,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
 
-      // If there's an existing notification listener, unsubscribe from it.
       if (notificationUnsubscribe) {
         notificationUnsubscribe();
         notificationUnsubscribe = null;
       }
 
       if (user) {
-        // User is logged in, set up profile and subscriptions
         let profileData = await fetchUserProfile(user);
         if (!profileData) {
             console.log("Profile not found for existing user, creating one now.");
@@ -54,12 +52,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         }
 
         setProfile(profileData as any);
-        
-        // Subscribe to notifications now that we have a user
         notificationUnsubscribe = subscribe();
-
       } else {
-        // User is logged out, clear profile and redirect if needed
         setProfile(null);
         if (pathname !== '/login' && !pathname.startsWith('/invite')) {
             router.push('/login');
@@ -68,7 +62,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    // Cleanup function for the main useEffect
     return () => {
       authUnsubscribe();
       if (notificationUnsubscribe) {
@@ -85,10 +78,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       profile?.role && f.roles.includes(profile.role)
   );
 
+  const bottomNavItems = aiFlows.filter((f) => 
+    (f.slug === "/profile" || f.slug === "/settings") &&
+    profile?.role && f.roles.includes(profile.role)
+  );
 
-  const bottomNavItems = aiFlows.filter((f) => f.slug === "/profile" || f.slug === "/settings");
-
-  // Don't render layout for login or invite pages
   if (pathname === '/login' || pathname.startsWith('/invite')) {
      if (loading) {
          return (
@@ -107,7 +101,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
     )
   }
-
 
   return (
     <div className="flex min-h-screen bg-background/50">

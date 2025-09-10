@@ -36,8 +36,8 @@ export const aiFlows = [
     slug: "/automated-claim", 
     file: "automated-insurance-claim-draft",
     icon: FilePenLine,
-    description: "Auto-draft insurance claims for damaged or lost packages.",
-    roles: ['claims', 'manager', 'admin', 'dispatcher', 'support'],
+    description: "Submit or process insurance claims for packages.",
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
     { 
     name: "Claims History", 
@@ -53,7 +53,7 @@ export const aiFlows = [
     file: "cross-carrier-risk-visibility",
     icon: ShieldAlert,
     description: "Aggregate shipment data to identify and report on supply chain risks.",
-    roles: ['dispatcher', 'manager', 'admin'],
+    roles: ['manager', 'admin'],
   },
   {
     name: "User Management",

@@ -21,7 +21,7 @@ export default function AutomatedClaimPage() {
   }
 
   // Admins see the claims queue directly on this page
-  if (profile?.role === 'admin') {
+  if (profile?.role === 'admin' || profile?.role === 'claims' || profile?.role === 'manager') {
     return <ClaimsHistoryPage />;
   }
   
@@ -44,7 +44,7 @@ export default function AutomatedClaimPage() {
             </Button>
             <Button asChild variant="outline" className="w-full sm:w-auto">
                 <Link href="/claims-history">
-                    View Claims History
+                    View My Requests
                 </Link>
             </Button>
         </CardContent>
@@ -53,12 +53,12 @@ export default function AutomatedClaimPage() {
   }
 
   return (
-    <RoleGate roles={['claims', 'manager', 'dispatcher', 'support']}>
+    <RoleGate roles={['dispatcher', 'support']}>
         <div className="space-y-6">
         <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight font-headline">Request a Claim Draft</h1>
             <p className="text-muted-foreground">
-                Submit package details to request an AI-generated insurance claim draft. An admin will review and process your request.
+                Submit package details to request an insurance claim draft. An admin will review and process your request.
             </p>
         </div>
         <Separator />
