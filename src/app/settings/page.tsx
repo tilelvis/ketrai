@@ -19,15 +19,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useTheme } from "next-themes";
 
 const settingsSchema = z.object({
-  preferences: z.object({
-    theme: z.enum(["light", "dark", "system"]),
-    locale: z.string().min(1, "Locale is required."),
-    notifications: z.object({
-      inApp: z.boolean(),
-      email: z.boolean(),
-    }),
-    dashboardLayout: z.enum(["grid", "compact"]),
+  theme: z.enum(["light", "dark", "system"]),
+  locale: z.string().min(1, "Locale is required."),
+  notifications: z.object({
+    inApp: z.boolean(),
+    email: z.boolean(),
   }),
+  dashboardLayout: z.enum(["grid", "compact"]),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -40,18 +38,16 @@ export default function SettingsPage() {
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
-      preferences: {
         theme: "system",
         locale: "en-US",
         notifications: { inApp: true, email: false },
         dashboardLayout: "grid",
-      },
     },
   });
 
   useEffect(() => {
     if (profile?.preferences) {
-      form.reset({ preferences: profile.preferences });
+      form.reset(profile.preferences);
     }
   }, [profile, form]);
 
@@ -63,12 +59,12 @@ export default function SettingsPage() {
     try {
       const userRef = doc(db, "users", profile.uid);
       await updateDoc(userRef, {
-        preferences: values.preferences,
+        preferences: values,
       });
 
-      const updatedProfile = { ...profile, ...values };
+      const updatedProfile = { ...profile, preferences: values };
       setProfile(updatedProfile);
-      setNextTheme(values.preferences.theme);
+      setNextTheme(values.theme);
 
       toast.success("Preferences saved successfully!");
     } catch (err) {
@@ -123,7 +119,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <FormField
                 control={form.control}
-                name="preferences.theme"
+                name="theme"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Theme</FormLabel>
@@ -146,7 +142,7 @@ export default function SettingsPage() {
               />
                <FormField
                 control={form.control}
-                name="preferences.dashboardLayout"
+                name="dashboardLayout"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Dashboard Layout</FormLabel>
@@ -180,7 +176,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <FormField
                 control={form.control}
-                name="preferences.notifications.inApp"
+                name="notifications.inApp"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
@@ -195,7 +191,7 @@ export default function SettingsPage() {
               />
               <FormField
                 control={form.control}
-                name="preferences.notifications.email"
+                name="notifications.email"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
