@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { aiFlows, getFlowBySlug } from "@/ai/flowRegistry";
 import { ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { profile } = useProfileStore();
@@ -18,6 +19,8 @@ export default function DashboardPage() {
     f.slug !== "/admin/users" &&
     profile?.role && f.roles.includes(profile.role)
   );
+  
+  const layout = profile?.preferences?.dashboardLayout || "grid";
 
   return (
     <div className="space-y-6">
@@ -31,7 +34,10 @@ export default function DashboardPage() {
       </div>
       <Separator />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className={cn(
+        "gap-4",
+        layout === "grid" ? "grid md:grid-cols-2" : "space-y-4"
+      )}>
         {accessibleFlows.map((flow) => {
           const Icon = flow.icon;
           return (
@@ -66,3 +72,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

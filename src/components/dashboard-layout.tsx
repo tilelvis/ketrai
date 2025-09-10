@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -13,6 +14,8 @@ import { useNotificationStore } from "@/store/notifications";
 import { onAuthStateChanged, auth, fetchUserProfile } from "@/lib/firebase";
 import { useProfileStore } from "@/store/profile";
 import { ProfileMenu } from "./profile-menu";
+import { useTheme } from "next-themes";
+
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,6 +23,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const subscribe = useNotificationStore((s) => s.subscribe);
   const { setUser, setProfile, profile } = useProfileStore();
   const [loading, setLoading] = useState(true);
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     let notificationUnsubscribe: (() => void) | null = null;
@@ -36,10 +40,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         const profileData = await fetchUserProfile(user);
         setProfile(profileData as any);
         
-        if (profileData?.preferences?.notifications?.inApp !== false) {
+        // Apply theme and subscribe to notifications based on preferences
+        if (profileData?.preferences) {
+            setTheme(profileData.preferences.theme);
+            if (profileData.preferences.notifications?.inApp !== false) {
+                notificationUnsubscribe = subscribe();
+            }
+        } else {
+            // Default behavior if preferences are not set
             notificationUnsubscribe = subscribe();
         }
-        
+
         if (pathname === '/login' || pathname.startsWith('/invite')) {
           router.push('/');
         }
@@ -59,7 +70,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         notificationUnsubscribe();
       }
     };
-  }, [subscribe, setProfile, setUser, router, pathname, profile?.preferences?.notifications?.inApp]);
+  }, [subscribe, setProfile, setUser, router, pathname, setTheme]);
 
   const mainNavItems = aiFlows.filter(f => 
       f.slug !== "/" && 
@@ -188,3 +199,4 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
