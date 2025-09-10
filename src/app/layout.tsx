@@ -7,7 +7,7 @@ import { DashboardLayout } from '@/components/dashboard-layout';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'ChainFlow AI',
+  title: 'ketrai',
   description: 'AI-Powered Supply Chain Orchestration',
 };
 

@@ -142,7 +142,7 @@ export default function InviteAcceptPage({ params }: { params: { token: string }
             <CardHeader>
                 <CardTitle>Create Your Account</CardTitle>
                 <CardDescription>
-                    Welcome! You've been invited to join ChainFlow AI as a <span className="font-semibold text-primary">{invite.role}</span>. 
+                    Welcome! You've been invited to join ketrai as a <span className="font-semibold text-primary">{invite.role}</span>. 
                     Please set a password to continue.
                 </CardDescription>
             </CardHeader>
@@ -174,5 +174,3 @@ export default function InviteAcceptPage({ params }: { params: { token: string }
     </div>
   );
 }
-
-    

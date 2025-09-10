@@ -64,7 +64,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center text-center">
             <Logo className="size-12 text-primary" />
-            <h1 className="text-3xl font-bold font-headline mt-4">Welcome to ChainFlow AI</h1>
+            <h1 className="text-3xl font-bold font-headline mt-4">Welcome to ketrai</h1>
             <p className="text-muted-foreground">The future of intelligent supply chain orchestration.</p>
         </div>
         <Card>

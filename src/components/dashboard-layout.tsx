@@ -107,7 +107,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <aside className="w-64 flex-col fixed inset-y-0 z-10 hidden border-r bg-card p-6 md:flex">
         <div className="flex items-center gap-2 mb-8">
           <Logo className="size-8 text-primary" />
-          <h1 className="text-xl font-semibold font-headline">ChainFlow AI</h1>
+          <h1 className="text-xl font-semibold font-headline">ketrai</h1>
         </div>
         <nav className="space-y-2 flex-1">
           <Link
