@@ -37,7 +37,7 @@ export const aiFlows = [
     file: "automated-insurance-claim-draft",
     icon: FilePenLine,
     description: "Submit or process insurance claims for packages.",
-    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
+    roles: ['dispatcher', 'claims', 'support', 'admin'],
   },
     { 
     name: "Claims History", 

@@ -1,18 +1,20 @@
+
 "use client";
 
 import { useState } from "react";
 import { AutomatedClaimForm } from "@/components/forms/automated-claim-form";
 import { Separator } from "@/components/ui/separator";
 import { useProfileStore } from "@/store/profile";
-import ClaimsHistoryPage from "../claims-history/page";
 import { RoleGate } from "@/components/role-gate";
+import ClaimsHistoryPage from "../claims-history/page";
+import ClaimsQueue from "./claims-queue";
 
 export default function AutomatedClaimPage() {
   const { profile } = useProfileStore();
 
-  // Admins, claims, and managers see the full queue directly on this page
-  if (profile?.role === 'admin' || profile?.role === 'claims' || profile?.role === 'manager') {
-    return <ClaimsHistoryPage />;
+  // Admins & Claims Officers see the processing queue
+  if (profile?.role === 'admin' || profile?.role === 'claims') {
+    return <ClaimsQueue />;
   }
   
   // Other roles (dispatcher, support) see the submission flow and their own history

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -10,21 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, ClipboardList, User, Check, X } from "lucide-react";
+import { RefreshCw, ClipboardList, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { approveClaim, rejectClaim } from "@/lib/claims";
 import { useProfileStore } from "@/store/profile";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 type Claim = {
   id: string;
@@ -35,59 +24,10 @@ type Claim = {
   requesterId: string;
 };
 
-function RejectClaimDialog({ claimId, onComplete }: { claimId: string, onComplete: () => void }) {
-    const [reason, setReason] = useState("");
-    const [loading, setLoading] = useState(false);
-
-    async function handleReject() {
-        setLoading(true);
-        toast.info("Rejecting claim...");
-        try {
-            await rejectClaim(claimId, reason);
-            toast.success("Claim rejected.");
-            onComplete();
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "An unknown error occurred.";
-            toast.error(`Failed to reject claim: ${message}`);
-        }
-        setLoading(false);
-    }
-    
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button size="sm" variant="destructive">
-                    <X className="mr-2 h-4 w-4" />
-                    Reject
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Reject Claim</DialogTitle>
-                    <DialogDescription>
-                        Please provide a reason for rejecting this claim. This will be logged and sent to the user.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                    <Label htmlFor="reason">Reason</Label>
-                    <Input id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g., Insufficient evidence provided."/>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => (document.querySelector('[data-radix-dialog-default-open="true"] button[aria-label="Close"]')?.click())}>Cancel</Button>
-                    <Button onClick={handleReject} disabled={loading || !reason}>
-                        {loading ? "Rejecting..." : "Confirm Rejection"}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
 export default function ClaimsHistoryPage({ isPersonalView = false }: { isPersonalView?: boolean }) {
     const { profile } = useProfileStore();
     const [claims, setClaims] = useState<Claim[]>([]);
     const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
     const fetchClaims = useCallback(async () => {
         if (!auth.currentUser) return;
@@ -99,7 +39,14 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
             if (isPersonalView) {
                 claimsQuery = query(claimsCollection, where("requesterId", "==", auth.currentUser.uid), orderBy("createdAt", "desc"));
             } else {
-                claimsQuery = query(claimsCollection, orderBy("createdAt", "desc"));
+                 // Admins, managers, and claims officers see all claims
+                 if (profile?.role && ['admin', 'manager', 'claims'].includes(profile.role)) {
+                    claimsQuery = query(claimsCollection, orderBy("createdAt", "desc"));
+                 } else {
+                    setClaims([]);
+                    setLoading(false);
+                    return;
+                 }
             }
             
             const snap = await getDocs(claimsQuery);
@@ -111,7 +58,7 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
         } finally {
             setLoading(false);
         }
-    }, [isPersonalView]);
+    }, [isPersonalView, profile?.role]);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(user => {
@@ -124,20 +71,6 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
         });
         return () => unsubscribe();
     }, [fetchClaims]);
-
-    async function handleApprove(claimId: string) {
-        setActionLoading(prev => ({...prev, [claimId]: true}));
-        toast.info("Approving claim...");
-        try {
-            await approveClaim(claimId);
-            toast.success("Claim approved successfully!");
-            fetchClaims();
-        } catch(err) {
-            const message = err instanceof Error ? err.message : "An unknown error occurred.";
-            toast.error(`Failed to approve claim: ${message}`);
-        }
-        setActionLoading(prev => ({...prev, [claimId]: false}));
-    }
 
     const getStatusVariant = (status: Claim['status']) => {
         switch (status) {
@@ -152,93 +85,82 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
      const getStatusBadgeClass = (status: Claim['status']) => {
         switch (status) {
             case 'approved': return 'bg-green-500/20 text-green-700 border-green-500/30';
+            case 'rejected': return 'bg-red-500/10 text-red-700 border-red-500/20';
             default: return '';
         }
     }
 
-    const PageTitle = isPersonalView ? "My Claim Requests" : "Claims Queue";
-    const PageDescription = isPersonalView ? "Track the status of your submitted insurance claim requests." : "View and process all submitted insurance claim requests.";
+    const PageTitle = isPersonalView ? "My Claim Requests" : "Claims History";
+    const PageDescription = isPersonalView 
+        ? "Track the status of your submitted insurance claim requests." 
+        : "View a complete history of all submitted claims.";
+
+    const allowedRoles = isPersonalView ? ['dispatcher', 'support'] : ["claims", "manager", "admin"];
 
     return (
-        <div className="space-y-6">
-            {!isPersonalView && (
-                 <RoleGate roles={["claims", "manager", "admin"]}>
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-bold tracking-tight font-headline">{PageTitle}</h1>
-                        <p className="text-muted-foreground">{PageDescription}</p>
-                    </div>
-                    <Separator />
-                </RoleGate>
-            )}
+        <RoleGate roles={allowedRoles}>
+            <div className="space-y-6">
+                <div className="space-y-1">
+                    <h1 className="text-2xl font-bold tracking-tight font-headline">{PageTitle}</h1>
+                    <p className="text-muted-foreground">{PageDescription}</p>
+                </div>
+                <Separator />
 
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                            <ClipboardList className="h-5 w-5 text-primary" />
-                            <CardTitle>{isPersonalView ? "My Requests" : "All Claim Requests"}</CardTitle>
-                            </div>
-                        <Button variant="outline" size="sm" onClick={fetchClaims} disabled={loading}>
-                            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {loading ? (
-                            <div className="space-y-2 p-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                <ClipboardList className="h-5 w-5 text-primary" />
+                                <CardTitle>{isPersonalView ? "My Requests" : "All Claims"}</CardTitle>
+                                </div>
+                            <Button variant="outline" size="sm" onClick={fetchClaims} disabled={loading}>
+                                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                Refresh
+                            </Button>
                         </div>
-                    ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {claims.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                                    No claim requests have been submitted yet.
-                                </TableCell>
-                            </TableRow>
-                        ) : claims.map((c) => (
-                            <TableRow key={c.id}>
-                                <TableCell>
-                                    {c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
-                                </TableCell>
-                                <TableCell>
-                                    <p className="font-medium max-w-sm">{c.type}</p>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant={getStatusVariant(c.status)} className={`capitalize ${getStatusBadgeClass(c.status)}`}>
-                                        {c.status.replace('_', ' ')}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <RoleGate roles={['admin', 'claims']}>
-                                        {c.status === 'requested' && !isPersonalView && (
-                                            <>
-                                            <Button size="sm" variant="secondary" onClick={() => handleApprove(c.id)} disabled={actionLoading[c.id]}>
-                                                <Check className="mr-2 h-4 w-4" />
-                                                Approve
-                                            </Button>
-                                            <RejectClaimDialog claimId={c.id} onComplete={fetchClaims} />
-                                            </>
-                                        )}
-                                    </RoleGate>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                                <div className="space-y-2 p-4">
+                                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                            </div>
+                        ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {claims.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                                        No claims found.
+                                    </TableCell>
+                                </TableRow>
+                            ) : claims.map((c) => (
+                                <TableRow key={c.id}>
+                                    <TableCell>
+                                        {c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="font-medium max-w-sm">{c.type}</p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={getStatusVariant(c.status)} className={`capitalize ${getStatusBadgeClass(c.status)}`}>
+                                            {c.status.replace('_', ' ')}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </RoleGate>
     );
 }
