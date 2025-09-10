@@ -6,14 +6,16 @@ export type Profile = {
   email: string | null;
   name: string;
   role: "dispatcher" | "manager" | "claims" | "admin" | "support";
-  theme: "light" | "dark" | "system";
   status: "active" | "inactive";
   photoURL?: string;
   preferences: {
+    theme: "light" | "dark" | "system";
+    locale: string;
     notifications: {
         inApp: boolean;
         email: boolean;
-    }
+    };
+    dashboardLayout: "grid" | "compact";
   }
 };
 

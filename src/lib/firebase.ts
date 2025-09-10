@@ -20,6 +20,16 @@ export async function fetchUserProfile(user: User) {
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
 
+  const defaultPreferences = {
+    theme: "system",
+    locale: "en-US",
+    notifications: {
+        inApp: true,
+        email: false,
+    },
+    dashboardLayout: "grid",
+  };
+
   if (!snap.exists()) {
     console.log(`Profile for ${user.uid} does not exist. Creating one.`);
     const newProfile = {
@@ -27,15 +37,9 @@ export async function fetchUserProfile(user: User) {
       email: user.email,
       name: user.displayName ?? user.email?.split('@')[0] ?? "New User",
       role: "dispatcher",
-      theme: "system",
       status: "active",
       photoURL: user.photoURL ?? "",
-      preferences: {
-        notifications: {
-          inApp: true,
-          email: false,
-        }
-      }
+      preferences: defaultPreferences
     };
     await setDoc(ref, newProfile);
     return newProfile;
@@ -44,13 +48,10 @@ export async function fetchUserProfile(user: User) {
   const profileData = snap.data();
   // Ensure preferences object exists for older users
   if (!profileData.preferences) {
-    profileData.preferences = {
-      notifications: { inApp: true, email: false }
-    };
+    profileData.preferences = defaultPreferences;
     // Optionally, update the document in Firestore
     await updateDoc(ref, { preferences: profileData.preferences });
   }
-
 
   return profileData;
 }
