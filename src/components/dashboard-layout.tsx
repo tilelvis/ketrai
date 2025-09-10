@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -37,6 +36,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         const profileData = await fetchUserProfile(user);
         setProfile(profileData as any);
         notificationUnsubscribe = subscribe();
+        
+        if (pathname === '/login' || pathname.startsWith('/invite')) {
+          router.push('/');
+        }
+
       } else {
         setProfile(null);
         if (pathname !== '/login' && !pathname.startsWith('/invite')) {
@@ -67,24 +71,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     profile?.role && f.roles.includes(profile.role)
   );
 
-  if (pathname === '/login' || pathname.startsWith('/invite')) {
-     if (loading) {
-         return (
-             <div className="flex h-screen w-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-         )
-     }
-    return <>{children}</>;
-  }
+  const isAuthPage = pathname === '/login' || pathname.startsWith('/invite');
 
-  if (loading) {
+  if (loading && !isAuthPage) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
     )
   }
+
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
+
 
   return (
     <div className="flex min-h-screen bg-background/50">
@@ -112,7 +112,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               href={item.slug}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
-                pathname.startsWith(item.slug)
+                pathname.startsWith(item.slug) && item.slug !== '/'
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
