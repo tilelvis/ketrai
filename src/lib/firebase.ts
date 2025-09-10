@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, serverTimestamp, writeBatch, deleteDoc, query, orderBy, onSnapshot, where, Timestamp, addDoc } from "firebase/firestore";
@@ -22,7 +21,6 @@ export async function fetchUserProfile(user: User) {
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    // This case is unlikely with the current signup flow, but good practice.
     console.log(`Profile for ${user.uid} does not exist. Creating one.`);
     const newProfile = {
       uid: user.uid,
@@ -32,12 +30,29 @@ export async function fetchUserProfile(user: User) {
       theme: "system",
       status: "active",
       photoURL: user.photoURL ?? "",
+      preferences: {
+        notifications: {
+          inApp: true,
+          email: false,
+        }
+      }
     };
     await setDoc(ref, newProfile);
     return newProfile;
   }
 
-  return snap.data();
+  const profileData = snap.data();
+  // Ensure preferences object exists for older users
+  if (!profileData.preferences) {
+    profileData.preferences = {
+      notifications: { inApp: true, email: false }
+    };
+    // Optionally, update the document in Firestore
+    await updateDoc(ref, { preferences: profileData.preferences });
+  }
+
+
+  return profileData;
 }
 
 export { onAuthStateChanged, setDoc, doc, collection, getDocs, updateDoc, serverTimestamp, writeBatch, deleteDoc, query, orderBy, onSnapshot, where, Timestamp, addDoc };

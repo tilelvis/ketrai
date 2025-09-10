@@ -9,6 +9,12 @@ export type Profile = {
   theme: "light" | "dark" | "system";
   status: "active" | "inactive";
   photoURL?: string;
+  preferences: {
+    notifications: {
+        inApp: boolean;
+        email: boolean;
+    }
+  }
 };
 
 type ProfileStore = {
