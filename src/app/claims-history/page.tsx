@@ -1,10 +1,8 @@
-
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, getDocs, orderBy, query, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { collection, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -12,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, ClipboardList, FileText, FileJson, Sparkles, Loader2 } from "lucide-react";
+import { RefreshCw, ClipboardList, FileText, FileJson, Sparkles, Loader2, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -22,6 +20,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { runAutomatedClaim } from "@/app/automated-claim/actions";
+import { useProfileStore } from "@/store/profile";
+import { useNotificationStore } from "@/store/notifications";
+
 
 type Claim = {
   id: string;
@@ -32,6 +33,11 @@ type Claim = {
   claimDraftText?: string;
   claimDraftJson?: string;
   createdAt: Timestamp;
+  requester: {
+      uid: string;
+      name: string;
+      email: string;
+  }
 };
 
 function ClaimDetailsDialog({ claim }: { claim: Claim }) {
@@ -80,15 +86,28 @@ function ClaimDetailsDialog({ claim }: { claim: Claim }) {
 }
 
 
-export default function ClaimsHistoryPage() {
+export default function ClaimsHistoryPage({ isPersonalView = false }: { isPersonalView?: boolean }) {
+    const { profile } = useProfileStore();
     const [claims, setClaims] = useState<Claim[]>([]);
     const [loading, setLoading] = useState(true);
     const [draftingId, setDraftingId] = useState<string | null>(null);
+    const addNotification = useNotificationStore(s => s.add);
 
     const fetchClaims = useCallback(async () => {
+        if (!auth.currentUser) return;
         setLoading(true);
         try {
-            const claimsQuery = query(collection(db, "claims"), orderBy("createdAt", "desc"));
+            let claimsQuery;
+            const claimsCollection = collection(db, "claims");
+
+            if (isPersonalView) {
+                // Fetch only the current user's claims
+                claimsQuery = query(claimsCollection, where("requester.uid", "==", auth.currentUser.uid), orderBy("createdAt", "desc"));
+            } else {
+                 // Admins/managers/claims see all claims
+                claimsQuery = query(claimsCollection, orderBy("createdAt", "desc"));
+            }
+            
             const snap = await getDocs(claimsQuery);
             const data: Claim[] = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Claim));
             setClaims(data);
@@ -98,7 +117,7 @@ export default function ClaimsHistoryPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isPersonalView]);
 
     useEffect(() => {
         fetchClaims();
@@ -117,6 +136,12 @@ export default function ClaimsHistoryPage() {
 
         if (result.success) {
             toast.success("Claim drafted successfully!");
+            // Send notification to the user who requested it
+            addNotification({
+                message: `Your claim for "${claim.claimReason}" has been drafted by an admin.`,
+                type: 'success',
+                category: 'claims'
+            }, claim.requester.uid);
             fetchClaims(); // Refresh the list to show the new status
         } else {
             toast.error(result.error);
@@ -133,86 +158,103 @@ export default function ClaimsHistoryPage() {
         }
     }
 
-    return (
-        <RoleGate roles={["claims", "manager", "admin"]}>
-            <div className="space-y-6">
-                <div className="space-y-1">
-                    <h1 className="text-2xl font-bold tracking-tight font-headline">Claims Queue</h1>
-                    <p className="text-muted-foreground">View and process all submitted insurance claim requests.</p>
-                </div>
-                <Separator />
+    const PageTitle = isPersonalView ? "My Claim Requests" : "Claims Queue";
+    const PageDescription = isPersonalView ? "Track the status of your submitted insurance claim requests." : "View and process all submitted insurance claim requests.";
 
-                <Card>
-                    <CardHeader>
-                        <div className="flex justify-between items-center">
-                             <div className="flex items-center gap-2">
-                                <ClipboardList className="h-5 w-5 text-primary" />
-                                <CardTitle>All Claim Requests</CardTitle>
-                             </div>
-                            <Button variant="outline" size="sm" onClick={fetchClaims} disabled={loading}>
-                                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                Refresh
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        {loading ? (
-                             <div className="space-y-2 p-4">
-                                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+    return (
+        <div className="space-y-6">
+            {!isPersonalView && (
+                 <RoleGate roles={["claims", "manager", "admin"]}>
+                    <div className="space-y-1">
+                        <h1 className="text-2xl font-bold tracking-tight font-headline">{PageTitle}</h1>
+                        <p className="text-muted-foreground">{PageDescription}</p>
+                    </div>
+                    <Separator />
+                </RoleGate>
+            )}
+
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                            <ClipboardList className="h-5 w-5 text-primary" />
+                            <CardTitle>{isPersonalView ? "My Requests" : "All Claim Requests"}</CardTitle>
                             </div>
-                        ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Reason</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {claims.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                                        No claim requests have been submitted yet.
-                                    </TableCell>
-                                </TableRow>
-                            ) : claims.map((c) => (
-                                <TableRow key={c.id}>
+                        <Button variant="outline" size="sm" onClick={fetchClaims} disabled={loading}>
+                            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                            <div className="space-y-2 p-4">
+                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                        </div>
+                    ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {!isPersonalView && <TableHead>Requester</TableHead>}
+                                <TableHead>Date</TableHead>
+                                <TableHead>Reason</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {claims.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={isPersonalView ? 4 : 5} className="text-center text-muted-foreground h-24">
+                                    No claim requests have been submitted yet.
+                                </TableCell>
+                            </TableRow>
+                        ) : claims.map((c) => (
+                            <TableRow key={c.id}>
+                                {!isPersonalView && 
                                     <TableCell>
-                                        {c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
+                                        <div className="flex items-center gap-2">
+                                            <User className="h-4 w-4 text-muted-foreground" />
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{c.requester.name}</span>
+                                                <span className="text-xs text-muted-foreground">{c.requester.email}</span>
+                                            </div>
+                                        </div>
                                     </TableCell>
-                                     <TableCell>
-                                        <p className="font-medium max-w-sm">{c.claimReason}</p>
-                                    </TableCell>
+                                }
+                                <TableCell>
+                                    {c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
+                                </TableCell>
                                     <TableCell>
-                                        <Badge variant={getStatusVariant(c.status)} className="capitalize">
-                                            {c.status.replace('_', ' ')}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {c.status === 'drafted' && <ClaimDetailsDialog claim={c} />}
-                                        <RoleGate roles={['admin']}>
-                                            {c.status === 'pending_review' && (
-                                                <Button size="sm" onClick={() => handleDraftClaim(c)} disabled={draftingId === c.id}>
-                                                    {draftingId === c.id ? (
-                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <Sparkles className="mr-2 h-4 w-4" />
-                                                    )}
-                                                    Draft Claim
-                                                </Button>
-                                            )}
-                                        </RoleGate>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-        </RoleGate>
+                                    <p className="font-medium max-w-sm">{c.claimReason}</p>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant={getStatusVariant(c.status)} className="capitalize">
+                                        {c.status.replace('_', ' ')}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right space-x-2">
+                                    {c.status === 'drafted' && <ClaimDetailsDialog claim={c} />}
+                                    <RoleGate roles={['admin']}>
+                                        {c.status === 'pending_review' && !isPersonalView && (
+                                            <Button size="sm" onClick={() => handleDraftClaim(c)} disabled={draftingId === c.id}>
+                                                {draftingId === c.id ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Sparkles className="mr-2 h-4 w-4" />
+                                                )}
+                                                Draft Claim
+                                            </Button>
+                                        )}
+                                    </RoleGate>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
     );
 }

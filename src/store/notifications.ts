@@ -1,6 +1,5 @@
-
 import { create } from "zustand";
-import { db, auth, addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from "@/lib/firebase";
+import { db, auth, addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatch, where } from "@/lib/firebase";
 
 export type Notification = {
   id: string;
@@ -14,7 +13,7 @@ export type Notification = {
 
 type NotificationStore = {
   notifications: Notification[];
-  add: (n: Omit<Notification, "id" | "timestamp" | "uid">) => Promise<void>;
+  add: (n: Omit<Notification, "id" | "timestamp" | "uid">, targetUid?: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   clear: () => Promise<void>;
   subscribe: () => () => void; // Returns an unsubscribe function
@@ -23,16 +22,18 @@ type NotificationStore = {
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
 
-  add: async (n) => {
-    const user = auth.currentUser;
-    if (!user) {
+  add: async (n, targetUid) => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
         console.error("Cannot add notification. User not authenticated.");
         return;
     }
+    const uid = targetUid || currentUser.uid;
+
     try {
       await addDoc(collection(db, "notifications"), {
         ...n,
-        uid: user.uid,
+        uid: uid,
         timestamp: serverTimestamp(),
       });
     } catch (error) {
@@ -69,13 +70,15 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     const user = auth.currentUser;
     if (!user) return () => {};
 
-    const q = query(collection(db, "notifications"), orderBy("timestamp", "desc"));
+    const q = query(
+        collection(db, "notifications"),
+        where("uid", "==", user.uid),
+        orderBy("timestamp", "desc")
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list: Notification[] = [];
       snapshot.forEach(doc => {
-          // In a real multi-tenant app, you'd filter by user.uid here in the query.
-          // For this demo, we show all system notifications.
           list.push({ id: doc.id, ...doc.data() } as Notification);
       });
       set({ notifications: list });

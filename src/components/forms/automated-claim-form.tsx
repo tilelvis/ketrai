@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -16,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, FilePenLine } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { useProfileStore } from "@/store/profile";
 
 
 const formSchema = z.object({
@@ -25,12 +25,9 @@ const formSchema = z.object({
   damagePhotoDataUri: z.string().optional(),
 });
 
-export function AutomatedClaimForm({
-  onComplete,
-}: {
-  onComplete: () => void;
-}) {
+export function AutomatedClaimForm() {
   const [loading, setLoading] = useState(false);
+  const { profile } = useProfileStore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,14 +40,25 @@ export function AutomatedClaimForm({
   });
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!profile || !profile.email) {
+        toast.error("You must be logged in to submit a claim.");
+        return;
+    }
     setLoading(true);
     toast.info("Submitting claim request...");
     
-    const result = await submitClaimRequest(values);
+    const result = await submitClaimRequest({
+        ...values,
+        requester: {
+            uid: profile.uid,
+            name: profile.name,
+            email: profile.email
+        }
+    });
 
     if (result.success) {
       toast.success("Claim request submitted successfully!");
-      onComplete();
+      form.reset(); // Clear the form for the next submission
     } else {
       toast.error(result.error);
     }
@@ -62,7 +70,7 @@ export function AutomatedClaimForm({
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-lg font-medium font-headline">Claim Request Details</CardTitle>
+            <CardTitle className="text-lg font-medium font-headline">New Claim Request</CardTitle>
             <FilePenLine className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
