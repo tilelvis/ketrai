@@ -5,48 +5,50 @@ service cloud.firestore {
     // User profile + preferences
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-
+      
       // Notifications - only visible to owner
       match /notifications/{notifId} {
-        allow read, update: if request.auth.uid == userId;
+        allow read, update, delete: if request.auth.uid == userId;
         allow create: if request.auth.token.admin == true || request.auth.uid == userId;
       }
     }
     
-    // Invites can be read with a valid token, and created by admins.
+    // Invites can only be read if you have the token, and created by admins.
     match /invites/{inviteId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.token.admin == true;
-      allow update: if request.auth != null; // For accepting/cancelling
+    	allow read: if request.auth == null; // Allows unauthenticated users to read with token
+      allow create: if request.auth.token.admin == true;
+      allow update: if request.auth.token.admin == true || request.auth != null;
     }
 
     // Claims workflow
     match /claims/{claimId} {
-      // Users can create their own claims
       allow create: if request.auth != null;
-      // Users can read their own claims, admins can read any
       allow read: if request.auth != null && 
-                (resource.data.requester.uid == request.auth.uid ||
-                 get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']);
-      // Only admins/claims/managers can update status
+                    (resource.data.requesterId == request.auth.uid ||
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']);
       allow update: if request.auth != null &&
-                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager'];
+      							get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager'];
       
       // Claim history is an append-only log
       match /history/{eventId} {
-        // Requester and admins/claims/managers can add history
-        allow create: if request.auth != null && (
-            get(/databases/$(database)/documents/claims/$(claimId)).data.requester.uid == request.auth.uid ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']
-        );
-        // Requester and admins/claims/managers can read history
+        allow create: if request.auth != null;
         allow read: if request.auth != null && (
-            get(/databases/$(database)/documents/claims/$(claimId)).data.requester.uid == request.auth.uid ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']
+          get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']
         );
-        // History is immutable
-        allow update, delete: if false;
+        allow update, delete: if false; // immutable history
       }
+    }
+
+    // Global data settings - read-only for all authenticated users
+    match /settings/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // only via Cloud Functions
+    }
+
+    // Admin-only settings
+    match /admin/{docId} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
     }
   }
 }

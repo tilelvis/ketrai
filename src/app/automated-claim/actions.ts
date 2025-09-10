@@ -2,55 +2,9 @@
 
 import { automatedInsuranceClaimDraft } from "@/ai/flows/automated-insurance-claim-draft";
 import type { AutomatedInsuranceClaimDraftInput } from "@/ai/flows/automated-insurance-claim-draft";
-import { db, doc, collection, writeBatch, serverTimestamp, addDoc } from "@/lib/firebase";
-import { z } from "zod";
+import { db, doc, collection, writeBatch, serverTimestamp } from "@/lib/firebase";
 
-const ClaimRequestSchema = z.object({
-  packageTrackingHistory: z.string(),
-  productDetails: z.string(),
-  claimReason: z.string(),
-  damagePhotoDataUri: z.string().optional(),
-  requester: z.object({
-      uid: z.string(),
-      name: z.string(),
-      email: z.string().email(),
-  })
-});
-
-type ClaimRequestInput = z.infer<typeof ClaimRequestSchema>;
-
-export async function submitClaimRequest(data: ClaimRequestInput) {
-  try {
-    const batch = writeBatch(db);
-
-    // 1. Create the main claim document
-    const claimRef = doc(collection(db, "claims"));
-    batch.set(claimRef, {
-      ...data,
-      status: "pending_review",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-
-    // 2. Create the initial history event
-    const historyRef = doc(collection(db, "claims", claimRef.id, "history"));
-    batch.set(historyRef, {
-        action: "requested",
-        by: data.requester.uid,
-        timestamp: serverTimestamp(),
-        details: `Claim submitted by ${data.requester.name}.`,
-    });
-
-    await batch.commit();
-    return { success: true, claimId: claimRef.id };
-
-  } catch (error) {
-    console.error("Failed to submit claim request:", error);
-    const message = error instanceof Error ? error.message : "An unknown error occurred.";
-    return { success: false, error: `Failed to submit claim request: ${message}` };
-  }
-}
-
+// submitClaimRequest has been moved to the client-side claims service.
 
 export async function runAutomatedClaim(input: AutomatedInsuranceClaimDraftInput, admin: { uid: string; name: string }) {
   try {
@@ -63,7 +17,7 @@ export async function runAutomatedClaim(input: AutomatedInsuranceClaimDraftInput
     batch.update(claimRef, {
         claimDraftText: result.claimDraftText,
         claimDraftJson: result.claimDraftJson,
-        status: "drafted",
+        status: "inReview", // A more descriptive status after AI drafting
         updatedAt: serverTimestamp(),
         adminId: admin.uid,
     });

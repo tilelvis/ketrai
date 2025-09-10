@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, getDocs, orderBy, query, Timestamp, where, addDoc } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
@@ -10,85 +10,84 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, ClipboardList, FileText, FileJson, Sparkles, Loader2, User } from "lucide-react";
+import { RefreshCw, ClipboardList, User, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { approveClaim, rejectClaim } from "@/lib/claims";
+import { useProfileStore } from "@/store/profile";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { runAutomatedClaim } from "@/app/automated-claim/actions";
-import { useProfileStore } from "@/store/profile";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Claim = {
   id: string;
-  packageTrackingHistory: string;
-  productDetails: string;
-  claimReason: string;
-  status: "pending_review" | "drafted" | "rejected";
-  claimDraftText?: string;
-  claimDraftJson?: string;
+  type: string;
+  description: string;
+  status: "requested" | "inReview" | "approved" | "rejected";
   createdAt: Timestamp;
-  requester: {
-      uid: string;
-      name: string;
-      email: string;
-  }
+  requesterId: string;
 };
 
-function ClaimDetailsDialog({ claim }: { claim: Claim }) {
-  if (claim.status !== 'drafted' || !claim.claimDraftText || !claim.claimDraftJson) {
-      return null;
-  }
-    
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">View Draft</Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Claim Draft Details</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2 text-lg font-medium font-headline">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                Claim Narrative
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border bg-secondary/50 p-4 text-sm whitespace-pre-wrap">{claim.claimDraftText}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2 text-lg font-medium font-headline">
-                <FileJson className="h-5 w-5 text-muted-foreground" />
-                Structured Data (JSON)
-              </div>
-            </CardHeader>
-            <CardContent>
-              <pre className="rounded-md border bg-secondary/50 p-4 text-xs overflow-x-auto">
-                <code>{JSON.stringify(JSON.parse(claim.claimDraftJson), null, 2)}</code>
-              </pre>
-            </CardContent>
-          </Card>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+function RejectClaimDialog({ claimId, onComplete }: { claimId: string, onComplete: () => void }) {
+    const [reason, setReason] = useState("");
+    const [loading, setLoading] = useState(false);
 
+    async function handleReject() {
+        setLoading(true);
+        toast.info("Rejecting claim...");
+        try {
+            await rejectClaim(claimId, reason);
+            toast.success("Claim rejected.");
+            onComplete();
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "An unknown error occurred.";
+            toast.error(`Failed to reject claim: ${message}`);
+        }
+        setLoading(false);
+    }
+    
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button size="sm" variant="destructive">
+                    <X className="mr-2 h-4 w-4" />
+                    Reject
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Reject Claim</DialogTitle>
+                    <DialogDescription>
+                        Please provide a reason for rejecting this claim. This will be logged and sent to the user.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="reason">Reason</Label>
+                    <Input id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g., Insufficient evidence provided."/>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => (document.querySelector('[data-radix-dialog-default-open="true"] button[aria-label="Close"]')?.click())}>Cancel</Button>
+                    <Button onClick={handleReject} disabled={loading || !reason}>
+                        {loading ? "Rejecting..." : "Confirm Rejection"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function ClaimsHistoryPage({ isPersonalView = false }: { isPersonalView?: boolean }) {
     const { profile } = useProfileStore();
     const [claims, setClaims] = useState<Claim[]>([]);
     const [loading, setLoading] = useState(true);
-    const [draftingId, setDraftingId] = useState<string | null>(null);
+    const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
     const fetchClaims = useCallback(async () => {
         if (!auth.currentUser) return;
@@ -98,10 +97,8 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
             const claimsCollection = collection(db, "claims");
 
             if (isPersonalView) {
-                // Fetch only the current user's claims
-                claimsQuery = query(claimsCollection, where("requester.uid", "==", auth.currentUser.uid), orderBy("createdAt", "desc"));
+                claimsQuery = query(claimsCollection, where("requesterId", "==", auth.currentUser.uid), orderBy("createdAt", "desc"));
             } else {
-                 // Admins/managers/claims see all claims
                 claimsQuery = query(claimsCollection, orderBy("createdAt", "desc"));
             }
             
@@ -128,41 +125,34 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
         return () => unsubscribe();
     }, [fetchClaims]);
 
-    async function handleDraftClaim(claim: Claim) {
-        if (!profile) return;
-        setDraftingId(claim.id);
-        toast.info("Generating AI claim draft...");
-
-        const result = await runAutomatedClaim({
-            claimId: claim.id,
-            packageTrackingHistory: claim.packageTrackingHistory,
-            productDetails: claim.productDetails,
-            claimReason: claim.claimReason,
-        }, { uid: profile.uid, name: profile.name });
-
-        if (result.success) {
-            toast.success("Claim drafted successfully!");
-            // Add a notification for the requester
-            await addDoc(collection(db, 'users', claim.requester.uid, 'notifications'), {
-                type: 'claim',
-                claimId: claim.id,
-                message: `Your claim for "${claim.claimReason}" has been drafted.`,
-                read: false,
-                createdAt: new Date(),
-            });
-            fetchClaims(); // Refresh the list to show the new status
-        } else {
-            toast.error(result.error);
+    async function handleApprove(claimId: string) {
+        setActionLoading(prev => ({...prev, [claimId]: true}));
+        toast.info("Approving claim...");
+        try {
+            await approveClaim(claimId);
+            toast.success("Claim approved successfully!");
+            fetchClaims();
+        } catch(err) {
+            const message = err instanceof Error ? err.message : "An unknown error occurred.";
+            toast.error(`Failed to approve claim: ${message}`);
         }
-        setDraftingId(null);
+        setActionLoading(prev => ({...prev, [claimId]: false}));
     }
 
     const getStatusVariant = (status: Claim['status']) => {
         switch (status) {
-            case 'pending_review': return 'secondary';
-            case 'drafted': return 'default';
+            case 'requested': return 'secondary';
+            case 'inReview': return 'default';
+            case 'approved': return 'default';
             case 'rejected': return 'destructive';
             default: return 'outline';
+        }
+    }
+    
+     const getStatusBadgeClass = (status: Claim['status']) => {
+        switch (status) {
+            case 'approved': return 'bg-green-500/20 text-green-700 border-green-500/30';
+            default: return '';
         }
     }
 
@@ -203,9 +193,8 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                {!isPersonalView && <TableHead>Requester</TableHead>}
                                 <TableHead>Date</TableHead>
-                                <TableHead>Reason</TableHead>
+                                <TableHead>Type</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -213,46 +202,33 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
                         <TableBody>
                         {claims.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={isPersonalView ? 4 : 5} className="text-center text-muted-foreground h-24">
+                                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
                                     No claim requests have been submitted yet.
                                 </TableCell>
                             </TableRow>
                         ) : claims.map((c) => (
                             <TableRow key={c.id}>
-                                {!isPersonalView && 
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <User className="h-4 w-4 text-muted-foreground" />
-                                            <div className="flex flex-col">
-                                                <span className="font-medium">{c.requester.name}</span>
-                                                <span className="text-xs text-muted-foreground">{c.requester.email}</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                }
                                 <TableCell>
                                     {c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
                                 </TableCell>
-                                    <TableCell>
-                                    <p className="font-medium max-w-sm">{c.claimReason}</p>
+                                <TableCell>
+                                    <p className="font-medium max-w-sm">{c.type}</p>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant={getStatusVariant(c.status)} className="capitalize">
+                                    <Badge variant={getStatusVariant(c.status)} className={`capitalize ${getStatusBadgeClass(c.status)}`}>
                                         {c.status.replace('_', ' ')}
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right space-x-2">
-                                    {c.status === 'drafted' && <ClaimDetailsDialog claim={c} />}
                                     <RoleGate roles={['admin', 'claims', 'manager']}>
-                                        {c.status === 'pending_review' && !isPersonalView && (
-                                            <Button size="sm" onClick={() => handleDraftClaim(c)} disabled={draftingId === c.id}>
-                                                {draftingId === c.id ? (
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Sparkles className="mr-2 h-4 w-4" />
-                                                )}
-                                                Draft Claim
+                                        {c.status === 'requested' && !isPersonalView && (
+                                            <>
+                                            <Button size="sm" variant="secondary" onClick={() => handleApprove(c.id)} disabled={actionLoading[c.id]}>
+                                                <Check className="mr-2 h-4 w-4" />
+                                                Approve
                                             </Button>
+                                            <RejectClaimDialog claimId={c.id} onComplete={fetchClaims} />
+                                            </>
                                         )}
                                     </RoleGate>
                                 </TableCell>
