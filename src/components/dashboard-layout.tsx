@@ -35,7 +35,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       if (user) {
         const profileData = await fetchUserProfile(user);
         setProfile(profileData as any);
-        notificationUnsubscribe = subscribe();
+        
+        if (profileData?.preferences?.notifications?.inApp !== false) {
+            notificationUnsubscribe = subscribe();
+        }
         
         if (pathname === '/login' || pathname.startsWith('/invite')) {
           router.push('/');
@@ -56,7 +59,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         notificationUnsubscribe();
       }
     };
-  }, [subscribe, setProfile, setUser, router, pathname]);
+  }, [subscribe, setProfile, setUser, router, pathname, profile?.preferences?.notifications?.inApp]);
 
   const mainNavItems = aiFlows.filter(f => 
       f.slug !== "/" && 
@@ -82,6 +85,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthPage) {
+    if (loading) {
+       return (
+           <div className="flex h-screen w-full items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+       )
+    }
     return <>{children}</>;
   }
 
