@@ -220,7 +220,7 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right space-x-2">
-                                    <RoleGate roles={['admin', 'claims', 'manager']}>
+                                    <RoleGate roles={['admin', 'claims']}>
                                         {c.status === 'requested' && !isPersonalView && (
                                             <>
                                             <Button size="sm" variant="secondary" onClick={() => handleApprove(c.id)} disabled={actionLoading[c.id]}>

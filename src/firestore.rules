@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAppUser() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAppUser() && request.auth.uid == userId;
+    }
+
+    function getRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isAdmin() {
+      return isAppUser() && getRole(request.auth.uid) == 'admin';
+    }
+
+    function isClaimsOfficer() {
+        return isAppUser() && getRole(request.auth.uid) in ['admin', 'claims'];
+    }
+
+    function isManager() {
+        return isAppUser() && getRole(request.auth.uid) in ['admin', 'manager'];
+    }
+
+    // User profile + preferences
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Invites
+    match /invites/{inviteId} {
+      // Admins can read all invites to manage them
+      allow read: if isAdmin();
+      // Admins can create and cancel invites
+      allow write: if isAdmin();
+      // Any user can read a specific invite if they have the token (for signup)
+      allow get: if true; 
+    }
+
+    // Claims
+    match /claims/{claimId} {
+      // Allow read for the user who created it, or for claims officers/managers/admins
+      allow read: if isAppUser() && (
+                    resource.data.requesterId == request.auth.uid || 
+                    isClaimsOfficer() ||
+                    isManager()
+                  );
+      // Allow creation for any authenticated user
+      allow create: if isAppUser();
+      // Only allow updates from claims officers/admins
+      allow update: if isClaimsOfficer();
+
+        // History is an immutable, append-only log
+        match /history/{eventId} {
+            allow read: if isAppUser() && (
+                get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid || 
+                isClaimsOfficer() ||
+                isManager()
+            );
+            allow create: if isAppUser(); // Anyone involved can add history
+            allow update, delete: if false; // Immutable
+        }
+    }
+  }
+}
