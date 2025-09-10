@@ -23,10 +23,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = subscribe();
-    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+    let notificationUnsubscribe: (() => void) | null = null;
+
+    const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+
+      // If there's an existing notification listener, unsubscribe from it.
+      if (notificationUnsubscribe) {
+        notificationUnsubscribe();
+        notificationUnsubscribe = null;
+      }
+
       if (user) {
+        // User is logged in, set up profile and subscriptions
         let profileData = await fetchUserProfile(user);
         if (!profileData) {
             console.log("Profile not found for existing user, creating one now.");
@@ -45,8 +54,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         }
 
         setProfile(profileData as any);
+        
+        // Subscribe to notifications now that we have a user
+        notificationUnsubscribe = subscribe();
 
       } else {
+        // User is logged out, clear profile and redirect if needed
         setProfile(null);
         if (pathname !== '/login' && !pathname.startsWith('/invite')) {
             router.push('/login');
@@ -55,9 +68,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    // Cleanup function for the main useEffect
     return () => {
-      unsub && unsub();
-      unsubAuth();
+      authUnsubscribe();
+      if (notificationUnsubscribe) {
+        notificationUnsubscribe();
+      }
     };
   }, [subscribe, setProfile, setUser, router, pathname]);
 
