@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { notify } from "@/lib/notify";
 import type { ProactiveEtaCalculationOutput } from "@/ai/flows/proactive-eta-calculation";
-import { toast } from "sonner";
 
 export function ProactiveEtaForm({
   onComplete,
@@ -25,22 +24,22 @@ export function ProactiveEtaForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    toast.info("Recalculating ETA...");
+    notify.info("Recalculating ETA...", "eta");
 
     try {
       const result = await runProactiveEta({ route, plannedEta, traffic, weather });
 
       if (result.riskLevel === "high") {
-        notify.risk(`High risk of delay for route: ${route}`, "high");
+        notify.risk(`High risk of delay for route: ${route}`, "high", "eta");
       } else if (result.riskLevel === "medium") {
-        notify.risk(`Medium risk of delay for route: ${route}`, "medium");
+        notify.risk(`Medium risk of delay for route: ${route}`, "medium", "eta");
       } else {
-        notify.success("ETA recalculated successfully!");
+        notify.success("ETA recalculated successfully!", "eta");
       }
       onComplete(result);
 
     } catch (err) {
-        notify.error(err instanceof Error ? err.message : "An unknown error occurred.");
+        notify.error(err instanceof Error ? err.message : "An unknown error occurred.", "eta");
     } finally {
         setLoading(false);
     }

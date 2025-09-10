@@ -11,7 +11,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationCenter } from "@/components/notification-center";
 import { useEffect, useState } from "react";
 import { useNotificationStore } from "@/store/notifications";
-import { onAuthStateChanged, auth, fetchUserProfile, db, doc, setDoc } from "@/lib/firebase";
+import { onAuthStateChanged, auth, fetchUserProfile } from "@/lib/firebase";
 import { useProfileStore } from "@/store/profile";
 import { ProfileMenu } from "./profile-menu";
 
@@ -19,7 +19,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const subscribe = useNotificationStore((s) => s.subscribe);
-  const { setUser, setProfile, profile, user } = useProfileStore();
+  const { setUser, setProfile, profile } = useProfileStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,23 +34,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       }
 
       if (user) {
-        let profileData = await fetchUserProfile(user);
-        if (!profileData) {
-            console.log("Profile not found for existing user, creating one now.");
-            const newProfile = {
-              uid: user.uid,
-              email: user.email,
-              name: user.displayName ?? user.email?.split('@')[0] ?? "New User",
-              role: "dispatcher",
-              theme: "system",
-              status: "active",
-              createdAt: new Date().toISOString(),
-              photoURL: user.photoURL ?? "",
-            };
-            await setDoc(doc(db, "users", user.uid), newProfile);
-            profileData = newProfile;
-        }
-
+        const profileData = await fetchUserProfile(user);
         setProfile(profileData as any);
         notificationUnsubscribe = subscribe();
       } else {

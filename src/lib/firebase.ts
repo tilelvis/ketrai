@@ -1,8 +1,7 @@
 
-
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, serverTimestamp, writeBatch, deleteDoc, query, orderBy, onSnapshot, where, Timestamp, addDoc } from "firebase/firestore";
 
 const firebaseConfig = {
   "projectId": "chainflow-ai",
@@ -23,6 +22,7 @@ export async function fetchUserProfile(user: User) {
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
+    // This case is unlikely with the current signup flow, but good practice.
     console.log(`Profile for ${user.uid} does not exist. Creating one.`);
     const newProfile = {
       uid: user.uid,
@@ -31,7 +31,6 @@ export async function fetchUserProfile(user: User) {
       role: "dispatcher",
       theme: "system",
       status: "active",
-      createdAt: new Date().toISOString(),
       photoURL: user.photoURL ?? "",
     };
     await setDoc(ref, newProfile);
@@ -41,4 +40,4 @@ export async function fetchUserProfile(user: User) {
   return snap.data();
 }
 
-export { onAuthStateChanged, setDoc, doc, collection, getDocs, updateDoc };
+export { onAuthStateChanged, setDoc, doc, collection, getDocs, updateDoc, serverTimestamp, writeBatch, deleteDoc, query, orderBy, onSnapshot, where, Timestamp, addDoc };

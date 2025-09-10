@@ -1,22 +1,10 @@
 
-
 import { create } from "zustand";
-import { db, auth } from "@/lib/firebase";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  writeBatch,
-} from "firebase/firestore";
+import { db, auth, addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from "@/lib/firebase";
 
 export type Notification = {
   id: string;
-  uid: string; // User ID of the creator
+  uid: string; // User ID of the recipient
   message: string;
   type: "success" | "warning" | "error" | "info" | "risk";
   category: "dispatch" | "eta" | "claims" | "cross-carrier" | "system";
@@ -62,20 +50,10 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
   clear: async () => {
     const { notifications } = get();
-    const user = auth.currentUser;
-
-    if (!user || notifications.length === 0) return;
-
-    // Filter for notifications that have a UID and belong to the current user.
-    // This prevents trying to delete old notifications that are missing a UID.
-    const userNotifications = notifications.filter(n => n.uid && n.uid === user.uid);
-    if (userNotifications.length === 0) {
-      console.warn("No notifications found for the current user to clear.");
-      return;
-    }
+    if (notifications.length === 0) return;
     
     const batch = writeBatch(db);
-    userNotifications.forEach((n) => {
+    notifications.forEach((n) => {
       const docRef = doc(db, "notifications", n.id);
       batch.delete(docRef);
     });
@@ -88,16 +66,23 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   subscribe: () => {
+    const user = auth.currentUser;
+    if (!user) return () => {};
+
     const q = query(collection(db, "notifications"), orderBy("timestamp", "desc"));
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: Notification[] = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<Notification, "id">),
-      }));
+      const list: Notification[] = [];
+      snapshot.forEach(doc => {
+          // In a real multi-tenant app, you'd filter by user.uid here in the query.
+          // For this demo, we show all system notifications.
+          list.push({ id: doc.id, ...doc.data() } as Notification);
+      });
       set({ notifications: list });
     }, (error) => {
       console.error("Error subscribing to notifications:", error);
     });
+    
     return unsubscribe;
   },
 }));

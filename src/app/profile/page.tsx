@@ -18,19 +18,19 @@ import { Separator } from "@/components/ui/separator";
 import { notify } from "@/lib/notify";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTheme } from "next-themes";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   photoURL: z.string().url("Must be a valid URL.").optional().or(z.literal("")),
   theme: z.enum(["light", "dark", "system"]),
-  role: z.enum(["dispatcher", "manager", "claims", "admin", "support"]),
-  status: z.enum(["active", "inactive"]),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
   const { profile, setProfile } = useProfileStore();
+  const { setTheme: setNextTheme } = useTheme();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
@@ -39,8 +39,6 @@ export default function ProfilePage() {
       name: "",
       photoURL: "",
       theme: "system",
-      role: "dispatcher",
-      status: "active",
     },
   });
 
@@ -50,8 +48,6 @@ export default function ProfilePage() {
         name: profile.name,
         photoURL: profile.photoURL ?? "",
         theme: profile.theme,
-        role: profile.role,
-        status: profile.status,
       });
     }
   }, [profile, form]);
@@ -66,6 +62,7 @@ export default function ProfilePage() {
       await updateDoc(ref, values);
 
       setProfile({ ...profile, ...values });
+      setNextTheme(values.theme);
       notify.success("Profile updated successfully!");
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -88,7 +85,7 @@ export default function ProfilePage() {
                 <Skeleton className="h-6 w-32" />
                 <Skeleton className="h-4 w-64" />
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-6">
                 <div className="flex items-center gap-4">
                     <Skeleton className="w-16 h-16 rounded-full" />
                     <div className="space-y-2 flex-1">
@@ -128,7 +125,7 @@ export default function ProfilePage() {
                         <CardTitle>Personal Information</CardTitle>
                         <CardDescription>Update your name and avatar.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-6 pt-6">
                          <div className="flex items-center gap-4">
                             <Avatar className="w-16 h-16">
                                 <AvatarImage src={form.watch("photoURL") ?? undefined} alt={form.watch("name")} />
@@ -169,7 +166,7 @@ export default function ProfilePage() {
                         <CardTitle>Preferences</CardTitle>
                         <CardDescription>Adjust your application settings.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-6 pt-6">
                          <FormField
                             control={form.control}
                             name="theme"
@@ -192,33 +189,6 @@ export default function ProfilePage() {
                                 </FormItem>
                             )}
                         />
-
-                        {profile.role === "admin" && (
-                            <FormField
-                                control={form.control}
-                                name="role"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Role</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                        <SelectValue placeholder="Select role" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="dispatcher">Dispatcher</SelectItem>
-                                        <SelectItem value="manager">Manager</SelectItem>
-                                        <SelectItem value="claims">Claims Officer</SelectItem>
-                                        <SelectItem value="support">Support</SelectItem>
-                                        <SelectItem value="admin">Admin</SelectItem>
-                                    </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        )}
                     </CardContent>
                 </Card>
 
