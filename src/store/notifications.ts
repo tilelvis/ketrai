@@ -1,79 +1,38 @@
 import { create } from "zustand";
-import { db, auth, addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatch, where } from "@/lib/firebase";
+import { db, auth, collection, onSnapshot, orderBy, query, where, addDoc, serverTimestamp, writeBatch, doc, deleteDoc } from "@/lib/firebase";
 
 export type Notification = {
   id: string;
-  uid: string; // User ID of the recipient
+  type: "claim" | "system" | "eta" | "dispatch" | "cross-carrier" | "risk" | "info" | "success" | "warning" | "error";
   message: string;
-  type: "success" | "warning" | "error" | "info" | "risk";
-  category: "dispatch" | "eta" | "claims" | "cross-carrier" | "system";
+  read: boolean;
+  createdAt: any; // Firestore timestamp
+  // Optional fields
+  claimId?: string;
   severity?: "low" | "medium" | "high";
-  timestamp: any; // Firestore timestamp object
+  category?: string;
 };
 
 type NotificationStore = {
   notifications: Notification[];
-  add: (n: Omit<Notification, "id" | "timestamp" | "uid">, targetUid?: string) => Promise<void>;
+  subscribe: () => () => void; // Returns an unsubscribe function
   remove: (id: string) => Promise<void>;
   clear: () => Promise<void>;
-  subscribe: () => () => void; // Returns an unsubscribe function
 };
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
 
-  add: async (n, targetUid) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-        console.error("Cannot add notification. User not authenticated.");
-        return;
-    }
-    const uid = targetUid || currentUser.uid;
-
-    try {
-      await addDoc(collection(db, "notifications"), {
-        ...n,
-        uid: uid,
-        timestamp: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error("Error adding notification to Firestore:", error);
-    }
-  },
-
-  remove: async (id) => {
-    try {
-      await deleteDoc(doc(db, "notifications", id));
-    } catch (error) {
-      console.error("Error removing notification from Firestore:", error);
-    }
-  },
-
-  clear: async () => {
-    const { notifications } = get();
-    if (notifications.length === 0) return;
-    
-    const batch = writeBatch(db);
-    notifications.forEach((n) => {
-      const docRef = doc(db, "notifications", n.id);
-      batch.delete(docRef);
-    });
-
-    try {
-      await batch.commit();
-    } catch (error) {
-      console.error("Error clearing notifications with a batch write:", error);
-    }
-  },
-
   subscribe: () => {
     const user = auth.currentUser;
-    if (!user) return () => {};
+    if (!user) {
+        console.log("No user for notification subscription.");
+        return () => {};
+    }
 
     const q = query(
-        collection(db, "notifications"),
-        where("uid", "==", user.uid),
-        orderBy("timestamp", "desc")
+      collection(db, "users", user.uid, "notifications"),
+      orderBy("createdAt", "desc")
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -88,4 +47,35 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     
     return unsubscribe;
   },
+
+  remove: async (id: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "notifications", id));
+    } catch (error) {
+      console.error("Error removing notification:", error);
+    }
+  },
+
+  clear: async () => {
+    const user = auth.currentUser;
+    const { notifications } = get();
+    if (!user || notifications.length === 0) return;
+    
+    const batch = writeBatch(db);
+    notifications.forEach((n) => {
+      const docRef = doc(db, "users", user.uid, "notifications", n.id);
+      batch.delete(docRef);
+    });
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error("Error clearing notifications:", error);
+    }
+  },
 }));
+
+// Note: The global `notify` helper in `src/lib/notify.ts` is now only for ephemeral UI toasts.
+// All persistent notifications should be created by writing directly to the `users/{uid}/notifications` collection.

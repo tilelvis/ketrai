@@ -1,28 +1,26 @@
-
 import { toast } from "sonner";
-import { useNotificationStore, Notification } from "@/store/notifications";
+
+// This is now just a simple wrapper around the `sonner` toast library
+// for ephemeral, non-persistent UI feedback. For persistent, database-backed
+// notifications, you should write directly to the user's notification
+// sub-collection in Firestore.
 
 export const notify = {
-  success: (msg: string, category: Notification["category"] = "system") => {
+  success: (msg: string) => {
     toast.success(msg);
-    useNotificationStore.getState().add({ message: msg, type: "success", category });
   },
-  warning: (msg: string, category: Notification["category"] = "system") => {
+  warning: (msg: string) => {
     toast.warning(msg);
-    useNotificationStore.getState().add({ message: msg, type: "warning", category });
   },
-  error: (msg: string, category: Notification["category"] = "system") => {
+  error: (msg: string) => {
     toast.error(msg);
-    useNotificationStore.getState().add({ message: msg, type: "error", category });
   },
-  info: (msg: string, category: Notification["category"] = "system") => {
+  info: (msg: string) => {
     toast.info(msg);
-    useNotificationStore.getState().add({ message: msg, type: "info", category });
   },
   risk: (
     msg: string,
-    severity: "low" | "medium" | "high",
-    category: Notification["category"] = "system"
+    severity: "low" | "medium" | "high"
   ) => {
     const toastMethod = {
       low: toast.info,
@@ -32,6 +30,5 @@ export const notify = {
     toastMethod[severity](msg, {
       duration: severity === "high" ? 8000 : 4000,
     });
-    useNotificationStore.getState().add({ message: msg, type: "risk", severity, category });
   },
 };

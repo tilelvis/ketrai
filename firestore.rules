@@ -2,39 +2,51 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // User profile + preferences
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
 
+      // Notifications - only visible to owner
+      match /notifications/{notifId} {
+        allow read, update: if request.auth.uid == userId;
+        allow create: if request.auth.token.admin == true || request.auth.uid == userId;
+      }
+    }
+    
+    // Invites can be read with a valid token, and created by admins.
     match /invites/{inviteId} {
-        allow read: if request.auth != null; // Admins read to display, users read to accept.
-        allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-        allow update: if request.auth != null; // Admins cancel, users accept.
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.token.admin == true;
+      allow update: if request.auth != null; // For accepting/cancelling
     }
 
+    // Claims workflow
     match /claims/{claimId} {
-      // Allow create for any authenticated user
+      // Users can create their own claims
       allow create: if request.auth != null;
+      // Users can read their own claims, admins can read any
+      allow read: if request.auth != null && 
+                (resource.data.requester.uid == request.auth.uid ||
+                 get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']);
+      // Only admins/claims/managers can update status
+      allow update: if request.auth != null &&
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager'];
       
-      // Allow read if user is an admin/manager/claims or if they are the owner of the claim
-      allow read: if request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'manager', 'claims'] || resource.data.requester.uid == request.auth.uid);
-      
-      // Allow update only for admin role
-      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-
-      // No one can delete claims for now to preserve history
-      allow delete: if false;
-    }
-
-    match /notifications/{notificationId} {
-        // Users can only read their own notifications
-        allow read: if request.auth != null && resource.data.uid == request.auth.uid;
-        // Anyone can create a notification (e.g., system, other users)
-        // Read access is the primary security control here.
-        allow create: if request.auth != null;
-        // Users can delete their own notifications
-        allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
-        allow update: if false;
+      // Claim history is an append-only log
+      match /history/{eventId} {
+        // Requester and admins/claims/managers can add history
+        allow create: if request.auth != null && (
+            get(/databases/$(database)/documents/claims/$(claimId)).data.requester.uid == request.auth.uid ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']
+        );
+        // Requester and admins/claims/managers can read history
+        allow read: if request.auth != null && (
+            get(/databases/$(database)/documents/claims/$(claimId)).data.requester.uid == request.auth.uid ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']
+        );
+        // History is immutable
+        allow update, delete: if false;
+      }
     }
   }
 }

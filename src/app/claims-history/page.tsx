@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, Timestamp, where, addDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import { runAutomatedClaim } from "@/app/automated-claim/actions";
 import { useProfileStore } from "@/store/profile";
-import { useNotificationStore } from "@/store/notifications";
-
 
 type Claim = {
   id: string;
@@ -91,7 +89,6 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
     const [claims, setClaims] = useState<Claim[]>([]);
     const [loading, setLoading] = useState(true);
     const [draftingId, setDraftingId] = useState<string | null>(null);
-    const addNotification = useNotificationStore(s => s.add);
 
     const fetchClaims = useCallback(async () => {
         if (!auth.currentUser) return;
@@ -120,10 +117,19 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
     }, [isPersonalView]);
 
     useEffect(() => {
-        fetchClaims();
+        const unsubscribe = auth.onAuthStateChanged(user => {
+            if (user) {
+                fetchClaims();
+            } else {
+                setLoading(false);
+                setClaims([]);
+            }
+        });
+        return () => unsubscribe();
     }, [fetchClaims]);
 
     async function handleDraftClaim(claim: Claim) {
+        if (!profile) return;
         setDraftingId(claim.id);
         toast.info("Generating AI claim draft...");
 
@@ -132,16 +138,18 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
             packageTrackingHistory: claim.packageTrackingHistory,
             productDetails: claim.productDetails,
             claimReason: claim.claimReason,
-        });
+        }, { uid: profile.uid, name: profile.name });
 
         if (result.success) {
             toast.success("Claim drafted successfully!");
-            // Send notification to the user who requested it
-            addNotification({
-                message: `Your claim for "${claim.claimReason}" has been drafted by an admin.`,
-                type: 'success',
-                category: 'claims'
-            }, claim.requester.uid);
+            // Add a notification for the requester
+            await addDoc(collection(db, 'users', claim.requester.uid, 'notifications'), {
+                type: 'claim',
+                claimId: claim.id,
+                message: `Your claim for "${claim.claimReason}" has been drafted.`,
+                read: false,
+                createdAt: new Date(),
+            });
             fetchClaims(); // Refresh the list to show the new status
         } else {
             toast.error(result.error);
@@ -235,7 +243,7 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
                                 </TableCell>
                                 <TableCell className="text-right space-x-2">
                                     {c.status === 'drafted' && <ClaimDetailsDialog claim={c} />}
-                                    <RoleGate roles={['admin']}>
+                                    <RoleGate roles={['admin', 'claims', 'manager']}>
                                         {c.status === 'pending_review' && !isPersonalView && (
                                             <Button size="sm" onClick={() => handleDraftClaim(c)} disabled={draftingId === c.id}>
                                                 {draftingId === c.id ? (
