@@ -1,54 +1,44 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // User profile + preferences
+    // User profile and preferences can only be read/written by the owner
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Notifications - only visible to owner
+
+      // User notifications can only be managed by the owner or by an admin
       match /notifications/{notifId} {
-        allow read, update, delete: if request.auth.uid == userId;
-        allow create: if request.auth.token.admin == true || request.auth.uid == userId;
+        allow read, write: if request.auth.uid == userId;
+        // Admins can create notifications for other users
+        allow create: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       }
     }
     
-    // Invites can only be read if you have the token, and created by admins.
+    // Invites can be read by anyone with the token link, created by admins, and updated by anyone to prevent re-use
     match /invites/{inviteId} {
-    	allow read: if request.auth == null; // Allows unauthenticated users to read with token
-      allow create: if request.auth.token.admin == true;
-      allow update: if request.auth.token.admin == true || request.auth != null;
+      allow read, update;
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Claims workflow
+    // Claims can be created by specific roles.
+    // They can only be read by the requester or by privileged roles.
+    // They can only be updated by admins and claims officers.
     match /claims/{claimId} {
-      allow create: if request.auth != null;
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'support', 'dispatcher', 'manager'];
       allow read: if request.auth != null && 
-                    (resource.data.requesterId == request.auth.uid ||
-                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']);
-      allow update: if request.auth != null &&
-      							get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager'];
-      
-      // Claim history is an append-only log
+                (resource.data.requesterId == request.auth.uid ||
+                 get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']);
+      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims'];
+      allow delete: if false;
+
+      // History is append-only and can be created by any authenticated user.
+      // It can only be read by the original requester or privileged roles.
       match /history/{eventId} {
         allow create: if request.auth != null;
-        allow read: if request.auth != null && (
-          get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager']
-        );
-        allow update, delete: if false; // immutable history
+        allow read: if get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager'];
+        allow update, delete: if false;
       }
-    }
-
-    // Global data settings - read-only for all authenticated users
-    match /settings/{docId} {
-      allow read: if request.auth != null;
-      allow write: if false; // only via Cloud Functions
-    }
-
-    // Admin-only settings
-    match /admin/{docId} {
-      allow read, write: if request.auth != null && request.auth.token.admin == true;
     }
   }
 }
