@@ -10,8 +10,8 @@ export const aiFlows = [
   { 
     name: "Dashboard", 
     slug: "/",
-    file: "proactive-eta-calculation",
-    icon: Map,
+    file: "",
+    icon: Home,
     description: "Real-time fleet monitoring and AI-powered insights.",
     roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
@@ -57,7 +57,7 @@ export const aiFlows = [
   },
   {
     name: "User Management",
-    slug: "/user-management",
+    slug: "/admin/users",
     file: "",
     icon: Users,
     description: "Manage users and their roles.",

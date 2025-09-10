@@ -48,7 +48,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
       } else {
         setProfile(null);
-        if (pathname !== '/login') {
+        if (pathname !== '/login' && !pathname.startsWith('/invite')) {
             router.push('/login');
         }
       }
@@ -65,24 +65,31 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       f.slug !== "/" && 
       f.slug !== "/profile" && 
       f.slug !== "/settings" &&
-      f.slug !== "/user-management" &&
+      f.slug !== "/admin/users" &&
       profile?.role && f.roles.includes(profile.role)
   );
 
 
   const bottomNavItems = aiFlows.filter((f) => f.slug === "/profile" || f.slug === "/settings");
 
+  // Don't render layout for login or invite pages
+  if (pathname === '/login' || pathname.startsWith('/invite')) {
+     if (loading) {
+         return (
+             <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+         )
+     }
+    return <>{children}</>;
+  }
 
-  if (loading || (!user && pathname !== '/login')) {
+  if (loading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
     )
-  }
-
-  if (!user && pathname === '/login') {
-    return <>{children}</>;
   }
 
 
