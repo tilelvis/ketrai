@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useProfileStore } from "@/store/profile";
+import type { Profile } from "@/store/profile";
 
 type Claim = {
   id: string;
@@ -93,7 +94,6 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
         ? "Track the status of your submitted insurance claim requests." 
         : "View a complete history of all submitted claims.";
 
-    // Define roles that can access this page view
     const allowedRoles: (Profile['role'])[] = isPersonalView 
         ? ['dispatcher', 'support', 'claims', 'manager', 'admin', 'user', 'courier'] // Anyone can see their own
         : ['claims', 'manager', 'admin']; // Only these roles can see the full history

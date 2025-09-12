@@ -1,11 +1,10 @@
-
 "use client";
 
 import Link from "next/link";
 import { useProfileStore } from "@/store/profile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { aiFlows, getFlowBySlug } from "@/ai/flowRegistry";
+import { aiFlows } from "@/ai/flowRegistry";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +15,7 @@ export default function DashboardPage() {
     f.slug !== "/" &&
     f.slug !== "/profile" &&
     f.slug !== "/settings" &&
-    f.slug !== "/admin/users" &&
+    !f.slug.startsWith("/admin") &&
     profile?.role && f.roles.includes(profile.role)
   );
   
@@ -72,4 +71,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

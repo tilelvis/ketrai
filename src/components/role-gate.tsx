@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useProfileStore } from "@/store/profile";

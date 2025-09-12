@@ -66,7 +66,7 @@ export default function LoginPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unknown error occurred.";
       notify.error(`Authentication failed: ${message}`);
-       if (auth.currentUser) {
+       if (!auth.currentUser) {
             await logEvent(
                 "user_login_failed",
                 email, // Use email as actorId since UID is not available on failure

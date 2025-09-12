@@ -47,7 +47,9 @@ export async function raiseClaim(claimData: RaiseClaimInput) {
     details: 'Claim submitted by user'
   });
 
-  // 3. Log event to the audit log
+  await batch.commit();
+  
+  // 3. Log event to the audit log (after batch commit)
   await logEvent(
     "claim_requested",
     user.uid,
@@ -56,7 +58,6 @@ export async function raiseClaim(claimData: RaiseClaimInput) {
     { type: claimData.type, packageId: claimData.packageId }
   );
 
-  await batch.commit();
   return claimRef.id;
 }
 
@@ -96,7 +97,7 @@ export async function approveClaim(claimId: string) {
   });
 
   // 3. Create a notification for the user
-  const notificationRef = doc(collection(db, `users/${claimData.requesterId}/notifications`));
+  const notificationRef = doc(collection(db, "users", claimData.requesterId, "notifications"));
   batch.set(notificationRef, {
     type: "claim",
     claimId,
@@ -105,6 +106,8 @@ export async function approveClaim(claimId: string) {
     createdAt: serverTimestamp(),
   });
   
+  await batch.commit();
+
   // 4. Log event to the audit log
   await logEvent(
     "claim_approved",
@@ -113,8 +116,6 @@ export async function approveClaim(claimId: string) {
     { id: claimId, collection: "claims" },
     { requesterId: claimData.requesterId }
   );
-
-  await batch.commit();
 }
 
 /**
@@ -152,7 +153,7 @@ export async function rejectClaim(claimId: string, reason: string) {
   });
 
   // 3. Create a notification for the user
-  const notificationRef = doc(collection(db, `users/${claimData.requesterId}/notifications`));
+  const notificationRef = doc(collection(db, "users", claimData.requesterId, "notifications"));
   batch.set(notificationRef, {
     type: "claim",
     claimId,
@@ -161,6 +162,8 @@ export async function rejectClaim(claimId: string, reason: string) {
     createdAt: serverTimestamp(),
   });
 
+  await batch.commit();
+  
   // 4. Log event to the audit log
   await logEvent(
     "claim_rejected",
@@ -169,6 +172,4 @@ export async function rejectClaim(claimId: string, reason: string) {
     { id: claimId, collection: "claims" },
     { reason, requesterId: claimData.requesterId }
   );
-
-  await batch.commit();
 }

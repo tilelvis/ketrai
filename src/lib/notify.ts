@@ -1,5 +1,4 @@
 import { toast } from "sonner";
-import { useNotificationStore, Notification } from "@/store/notifications";
 
 export const notify = {
   success: (msg: string) => {
