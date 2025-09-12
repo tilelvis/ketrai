@@ -12,7 +12,7 @@ export const aiFlows = [
     file: "",
     icon: Home,
     description: "Real-time fleet monitoring and AI-powered insights.",
-    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin', 'user', 'courier'],
   },
   {
     name: "Proactive ETA",
@@ -36,7 +36,7 @@ export const aiFlows = [
     file: "automated-insurance-claim-draft",
     icon: FilePenLine,
     description: "Submit or process insurance claims for packages.",
-    roles: ['dispatcher', 'support', 'claims', 'admin'],
+    roles: ['dispatcher', 'support', 'claims', 'admin', 'user', 'courier'],
   },
   { 
     name: "Claims History", 
@@ -76,7 +76,7 @@ export const aiFlows = [
     file: "",
     icon: User,
     description: "User profile settings.",
-    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin', 'user', 'courier'],
   },
   {
     name: "Settings",
@@ -84,7 +84,7 @@ export const aiFlows = [
     file: "",
     icon: Settings,
     description: "Application settings.",
-    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin', 'user', 'courier'],
   },
 ];
 

@@ -36,7 +36,7 @@ export async function fetchUserProfile(user: User) {
       uid: user.uid,
       email: user.email,
       name: user.displayName ?? user.email?.split('@')[0] ?? "New User",
-      role: "dispatcher", // Default role for new signups
+      role: "user", // Default role for new signups
       status: "active",
       photoURL: user.photoURL ?? "",
       preferences: defaultPreferences

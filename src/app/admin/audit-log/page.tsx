@@ -4,13 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { collection, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { RoleGate } from "@/components/role-gate";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, ScrollText, FileJson } from "lucide-react";
+import { ScrollText, FileJson } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -19,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type AuditLog = {
   id: string;
@@ -63,7 +63,7 @@ export default function AuditLogPage() {
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchLogs = useCallback(() => {
+    const subscribeToLogs = useCallback(() => {
         const q = query(
             collection(db, "auditLogs"),
             orderBy("timestamp", "desc"),
@@ -84,9 +84,9 @@ export default function AuditLogPage() {
     }, []);
 
     useEffect(() => {
-        const unsubscribe = fetchLogs();
+        const unsubscribe = subscribeToLogs();
         return () => unsubscribe();
-    }, [fetchLogs]);
+    }, [subscribeToLogs]);
 
     return (
         <RoleGate roles={["admin"]}>

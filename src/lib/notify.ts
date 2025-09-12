@@ -1,9 +1,5 @@
 import { toast } from "sonner";
-
-// This is now just a simple wrapper around the `sonner` toast library
-// for ephemeral, non-persistent UI feedback. For persistent, database-backed
-// notifications, you should write directly to the user's notification
-// sub-collection in Firestore.
+import { useNotificationStore, Notification } from "@/store/notifications";
 
 export const notify = {
   success: (msg: string) => {

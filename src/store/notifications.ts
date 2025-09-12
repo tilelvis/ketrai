@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { db, auth, collection, onSnapshot, orderBy, query, writeBatch, doc, deleteDoc } from "@/lib/firebase";
+import { db, auth, collection, onSnapshot, orderBy, query, writeBatch, doc, deleteDoc, updateDoc } from "@/lib/firebase";
 
 export type Notification = {
   id: string;
@@ -78,7 +78,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
      if (!user) return;
      try {
        const docRef = doc(db, "users", user.uid, "notifications", id);
-       await docRef.update({ read: true });
+       await updateDoc(docRef, { read: true });
      } catch (error) {
        console.error("Error marking notification as read:", error);
      }

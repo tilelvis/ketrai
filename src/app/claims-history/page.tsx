@@ -94,12 +94,12 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
         : "View a complete history of all submitted claims.";
 
     // Define roles that can access this page view
-    const allowedRoles: string[] = isPersonalView 
-        ? ['dispatcher', 'support', 'claims', 'manager', 'admin'] // Anyone can see their own
+    const allowedRoles: (Profile['role'])[] = isPersonalView 
+        ? ['dispatcher', 'support', 'claims', 'manager', 'admin', 'user', 'courier'] // Anyone can see their own
         : ['claims', 'manager', 'admin']; // Only these roles can see the full history
 
     return (
-        <RoleGate roles={allowedRoles as any}>
+        <RoleGate roles={allowedRoles}>
             <div className="space-y-6">
                 {!isPersonalView && (
                     <>
@@ -155,7 +155,7 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={getStatusVariant(c.status)} className={`capitalize ${getStatusBadgeClass(c.status)}`}>
-                                            {c.status.replace('_', ' ')}
+                                            {c.status.replace(/([A-Z])/g, ' $1').trim()}
                                         </Badge>
                                     </TableCell>
                                 </TableRow>

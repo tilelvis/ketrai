@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -36,7 +35,7 @@ export default function LoginPage() {
         const user = userCredential.user;
         
         // This will create the user profile with default preferences
-        const profile = await fetchUserProfile(user);
+        const profile = await fetchUserProfile(user) as Profile;
 
         await logEvent(
           "user_created",
@@ -52,7 +51,7 @@ export default function LoginPage() {
         // Ideally, this is done after the profile is fetched in the dashboard layout,
         // but for simplicity, we do it here. The role might be stale if changed recently.
          if (auth.currentUser) {
-           const profile = await fetchUserProfile(auth.currentUser);
+           const profile = await fetchUserProfile(auth.currentUser) as Profile;
             await logEvent(
                 "user_login_success",
                 auth.currentUser.uid,

@@ -33,13 +33,13 @@ export async function logEvent(
         action,
         actorId,
         actorRole,
-        targetId: target.id,
         targetCollection: target.collection,
+        targetId: target.id,
         context,
         timestamp: serverTimestamp()
     });
   } catch (error) {
-    console.error("Failed to write to audit log:", error);
+    console.error("Failed to log event:", error);
     // In a production app, you might want to send this to a dedicated error monitoring service.
   }
 }

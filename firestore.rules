@@ -1,68 +1,43 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions to check role from the auth token's custom claims
-    function isRole(role) {
-      return request.auth.token.role == role;
-    }
-    function isOneOfRoles(roles) {
-      return request.auth.token.role in roles;
-    }
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Users:
-    // - Any signed-in user can get their own document.
-    // - Only admins can list/write to other user documents.
-    match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isRole('admin'));
-      allow list, write: if isSignedIn() && isRole('admin');
-      allow create: if isSignedIn() && request.auth.uid == userId; // Allow user to create their own doc on signup
-      
-      // Notifications: Only the user can access their own notifications.
-      match /notifications/{notificationId} {
-        allow read, write, delete: if isSignedIn() && request.auth.uid == userId;
-      }
+    
+    function hasRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     
-    // Claims:
-    // - Any user can create a claim.
-    // - Requester, claims, manager, and admin can read.
-    // - Claims, manager, and admin can update.
-    match /claims/{claimId} {
-      allow create: if isSignedIn();
-      allow read: if isSignedIn() && (resource.data.requesterId == request.auth.uid || isOneOfRoles(['claims', 'manager', 'admin']));
-      allow update: if isSignedIn() && isOneOfRoles(['claims', 'manager', 'admin']);
-      allow delete: if false;
+    function isOneOfRoles(roles) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+    }
 
-      // History: append-only, readable by those who can read the parent claim.
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId || hasRole('admin');
+      allow list: if hasRole('admin');
+      allow create: if request.auth.uid == userId;
+    }
+
+    match /invites/{inviteId} {
+      allow create: if hasRole('admin');
+      allow read: if true;
+      allow update: if hasRole('admin') || request.auth.uid != null;
+    }
+    
+    match /claims/{claimId} {
+      allow create: if request.auth != null;
+      allow read: if isOneOfRoles(['claims', 'manager', 'admin']) || resource.data.requesterId == request.auth.uid;
+      allow update: if isOneOfRoles(['claims', 'admin']);
+      
       match /history/{eventId} {
-        allow create: if isSignedIn();
-        allow read: if isSignedIn() && (get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid || isOneOfRoles(['claims', 'manager', 'admin']));
+        allow create: if request.auth != null;
+        allow read: if isOneOfRoles(['claims', 'manager', 'admin']) || get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid;
         allow update, delete: if false;
       }
     }
-
-    // Invites:
-    // - Admins can create.
-    // - Anyone can read (to validate a token).
-    // - Admins or the invited user can update (to accept).
-    match /invites/{inviteId} {
-      allow create: if isSignedIn() && isRole('admin');
-      allow read: if true; // Public read is needed to verify token on client
-      allow update: if isSignedIn();
-    }
-
-    // Audit Logs:
-    // - Any authenticated user can create (log an action).
-    // - ONLY admins can read.
-    // - Immutable: no updates or deletes.
+    
     match /auditLogs/{logId} {
-      allow create: if isSignedIn();
-      allow read: if isSignedIn() && isRole('admin');
-      allow update, delete: if false;
+      allow read: if hasRole('admin');
+      allow create: if request.auth != null;
+      allow update, delete: if false; 
     }
   }
 }
