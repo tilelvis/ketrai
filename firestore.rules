@@ -2,77 +2,61 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isAuth() {
-      return request.auth != null;
+    // Helper function to check user roles
+    function isRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
-    function isOwner(res) {
-      return request.auth.uid == res.data.requesterId;
-    }
-    function userRoles() {
-      // Use exists() to prevent errors on non-existent user docs
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : 
-             '';
-    }
-    function isAdmin() {
-      return userRoles() in ['admin'];
-    }
-    function isManager() {
-      return userRoles() in ['manager', 'admin'];
-    }
-    function isClaims() {
-      return userRoles() in ['claims', 'admin'];
-    }
-     function isClaimsManagerOrAdmin() {
-      return userRoles() in ['claims', 'manager', 'admin'];
-    }
-     function canRequestClaim() {
-      return userRoles() in ['dispatcher', 'support', 'claims', 'admin'];
+    function isOneOfRoles(roles) {
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userRole in roles;
     }
 
-    // User profiles can be read by their owner or any admin.
-    // Any authenticated user can create their own profile document.
+    // Users can read their own profile, admins can read any profile
     match /users/{userId} {
-      allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAuth() && request.auth.uid == userId;
-    }
-
-    // User-specific subcollections like notifications
-    match /users/{userId}/{subcollection}/{docId} {
-        allow read, write: if isAuth() && request.auth.uid == userId;
+      allow read: if request.auth.uid == userId || isRole('admin');
+      allow write: if request.auth.uid == userId;
+      // Notifications subcollection
+      match /notifications/{notificationId} {
+        allow read, write: if request.auth.uid == userId;
+      }
     }
     
-    // Invites can only be managed by admins.
+    // Invites can be read by anyone with the link token (for sign-up), but only created/managed by admins
     match /invites/{inviteId} {
-      allow read, write: if isAdmin();
+      allow read: if request.auth != null;
+      allow create, update: if isRole('admin');
     }
 
-    // Claims workflow rules
-    match /claims/{claimId} {
-      // Users can create claims, and admins can list them.
-      allow create: if isAuth() && canRequestClaim();
-
-      // Users can read their own claims. Admins/Managers/Claims can read all.
-      allow read: if isAuth() && (isOwner(resource) || isClaimsManagerOrAdmin());
-      allow list: if isAuth() && isClaimsManagerOrAdmin();
-
-      // Only Claims officers and Admins can update claims (approve/reject).
-      allow update: if isAuth() && isClaims();
-    }
-
-    // Subcollections within claims (like history)
-    match /claims/{claimId}/{subcollection}/{docId} {
-      allow read, write: if isAuth() && isClaims();
-    }
-
-    // Audit logs are append-only. Any authenticated user can create one.
-    // They cannot be spoofed because the actorId is set by the server function.
+    // Audit logs are immutable (append-only)
     match /auditLogs/{logId} {
-      allow create: if isAuth();
-      allow read: if isAdmin(); // Only admins can view the audit log
-      allow update, delete: if false; // Immutable
+      allow create: if request.auth != null;
+      allow read: if isRole('admin'); // Admins can read all audit logs
+      allow update, delete: if false;
+    }
+
+    // Claims collection rules
+    match /claims/{claimId} {
+      // Users can only read their own claims
+      allow get: if request.auth.uid == resource.data.requesterId || isOneOfRoles(['admin', 'claims', 'manager']);
+      
+      // Admins and claims officers can list claims for the queue/history
+      allow list: if isOneOfRoles(['admin', 'claims', 'manager']);
+
+      // Dispatchers, Support, and Claims officers can create claims
+      allow create: if isOneOfRoles(['dispatcher', 'support', 'claims']);
+
+      // Only admins and claims officers can update a claim (e.g., approve/reject)
+      allow update: if isOneOfRoles(['admin', 'claims']);
+
+      // No one can delete claims
+      allow delete: if false;
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read: if isOneOfRoles(['admin', 'claims', 'manager']);
+        allow create: if isOneOfRoles(['admin', 'claims']);
+        allow update, delete: if false;
+      }
     }
   }
 }
