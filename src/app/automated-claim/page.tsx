@@ -19,7 +19,7 @@ export default function AutomatedClaimPage() {
   
   // Other roles (dispatcher, support) see the submission flow and their own history
   return (
-    <RoleGate roles={['dispatcher', 'support']}>
+    <RoleGate roles={['dispatcher', 'support', 'claims']}>
         <div className="space-y-6">
             <div className="space-y-1">
                 <h1 className="text-2xl font-bold tracking-tight font-headline">Automated Claim Request</h1>

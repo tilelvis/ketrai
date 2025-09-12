@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, ClipboardList, User } from "lucide-react";
+import { RefreshCw, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useProfileStore } from "@/store/profile";
 
@@ -39,7 +39,6 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
             if (isPersonalView) {
                 claimsQuery = query(claimsCollection, where("requesterId", "==", auth.currentUser.uid), orderBy("createdAt", "desc"));
             } else {
-                 // Admins, managers, and claims officers see all claims
                  if (profile?.role && ['admin', 'manager', 'claims'].includes(profile.role)) {
                     claimsQuery = query(claimsCollection, orderBy("createdAt", "desc"));
                  } else {
@@ -95,16 +94,20 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
         ? "Track the status of your submitted insurance claim requests." 
         : "View a complete history of all submitted claims.";
 
-    const allowedRoles = isPersonalView ? ['dispatcher', 'support'] : ["claims", "manager", "admin"];
+    const allowedRoles = isPersonalView ? ['dispatcher', 'support', 'claims'] : ["claims", "manager", "admin"];
 
     return (
         <RoleGate roles={allowedRoles}>
             <div className="space-y-6">
-                <div className="space-y-1">
-                    <h1 className="text-2xl font-bold tracking-tight font-headline">{PageTitle}</h1>
-                    <p className="text-muted-foreground">{PageDescription}</p>
-                </div>
-                <Separator />
+                {!isPersonalView && (
+                    <>
+                        <div className="space-y-1">
+                            <h1 className="text-2xl font-bold tracking-tight font-headline">{PageTitle}</h1>
+                            <p className="text-muted-foreground">{PageDescription}</p>
+                        </div>
+                        <Separator />
+                    </>
+                )}
 
                 <Card>
                     <CardHeader>

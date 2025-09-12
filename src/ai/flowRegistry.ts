@@ -38,7 +38,7 @@ export const aiFlows = [
     description: "Submit or process insurance claims for packages.",
     roles: ['dispatcher', 'claims', 'support', 'admin'],
   },
-    { 
+  { 
     name: "Claims History", 
     slug: "/claims-history", 
     file: "",
