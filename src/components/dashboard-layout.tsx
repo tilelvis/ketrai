@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -6,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons";
 import { aiFlows } from "@/ai/flowRegistry";
-import { Home, Loader2, Users } from "lucide-react";
+import { Home, Loader2, Users, ScrollText } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationCenter } from "@/components/notification-center";
 import { useEffect, useState } from "react";
@@ -40,14 +39,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         const profileData = await fetchUserProfile(user);
         setProfile(profileData as any);
         
-        // Apply theme and subscribe to notifications based on preferences
         if (profileData?.preferences) {
             setTheme(profileData.preferences.theme);
             if (profileData.preferences.notifications?.inApp !== false) {
                 notificationUnsubscribe = subscribe();
             }
         } else {
-            // Default behavior if preferences are not set
             notificationUnsubscribe = subscribe();
         }
 
@@ -76,8 +73,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       f.slug !== "/" && 
       f.slug !== "/profile" && 
       f.slug !== "/settings" &&
-      f.slug !== "/admin/users" &&
+      !f.slug.startsWith("/admin") &&
       profile?.role && f.roles.includes(profile.role)
+  );
+
+  const adminNavItems = aiFlows.filter(f => 
+    f.slug.startsWith("/admin") &&
+    profile?.role && f.roles.includes(profile.role)
   );
 
   const bottomNavItems = aiFlows.filter((f) => 
@@ -142,21 +144,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               {item.name}
             </Link>
           ))}
-          {profile?.role === 'admin' && (
+          {adminNavItems.length > 0 && (
              <div className="pt-4">
                 <h2 className="px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-1">Admin</h2>
-                <Link
-                    href="/admin/users"
-                    className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
-                        pathname.startsWith("/admin/users")
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    >
-                    <Users className="h-4 w-4" />
-                    User Management
-                </Link>
+                {adminNavItems.map((item) => (
+                  <Link
+                      key={item.slug}
+                      href={item.slug}
+                      className={cn(
+                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
+                          pathname.startsWith(item.slug)
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      >
+                      <item.icon className="h-4 w-4" />
+                      {item.name}
+                  </Link>
+                ))}
             </div>
           )}
         </nav>
@@ -199,4 +204,3 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

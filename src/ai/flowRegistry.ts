@@ -1,10 +1,9 @@
-
 /**
  * @fileOverview A central registry for all AI flows available in the application.
  * This allows for dynamic generation of navigation and easy registration of new flows.
  */
 
-import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings, Users, ClipboardList, Map } from "lucide-react";
+import { FilePenLine, Home, Route, ShieldAlert, Timer, User, Settings, Users, ClipboardList, ScrollText } from "lucide-react";
 
 export const aiFlows = [
   { 
@@ -61,6 +60,14 @@ export const aiFlows = [
     file: "",
     icon: Users,
     description: "Manage users and their roles.",
+    roles: ['admin'],
+  },
+  {
+    name: "Audit Log",
+    slug: "/admin/audit-log",
+    file: "",
+    icon: ScrollText,
+    description: "View a complete log of all system and user events.",
     roles: ['admin'],
   },
   {
