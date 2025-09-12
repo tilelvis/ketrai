@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -5,55 +6,42 @@ service cloud.firestore {
     // User profile + preferences
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      match /alerts/{alertId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+
+      // Notifications - only visible to owner
       match /notifications/{notifId} {
-        allow read, update, delete: if request.auth.uid == userId;
-        allow create: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        allow read, update: if request.auth.uid == userId;
+        // Admins can create notifications for users.
+        allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'claims', 'manager'];
       }
-    }
-    
-    // Invites can only be read with the token, created by admins, and updated by the user accepting it.
-    match /invites/{inviteId} {
-        allow read: if resource.data.token == request.resource.data.token;
-        allow create: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-        allow update: if request.auth != null; // User accepting the invite
     }
 
+    // Users can create their own claims. Admins/Managers/Claims can list/read all.
     match /claims/{claimId} {
       allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['support', 'dispatcher', 'claims', 'manager', 'admin'];
-      
-      // Admins/Managers/Claims can list the collection for queries
+      allow read: if request.auth != null && (request.auth.uid == resource.data.requesterId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['claims', 'manager', 'admin']);
       allow list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['claims', 'manager', 'admin'];
-
-      // Individuals can read their own claims, Admins/Managers/Claims can read any
-      allow read: if request.auth != null && 
-                (resource.data.requesterId == request.auth.uid ||
-                 get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['claims', 'manager', 'admin']);
-                 
       allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['claims', 'admin'];
-
-      // Claim history is append-only for participants, readable by participants/admins
-      match /history/{eventId} {
-        allow create: if request.auth != null; 
-        allow read: if request.auth != null && (
-          get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['claims', 'manager', 'admin']
-        );
-        allow update, delete: if false; // immutable history
-      }
     }
 
-    // Global data settings - read-only for all authenticated users
-    match /settings/{docId} {
-      allow read: if request.auth != null;
-      allow write: if false; // only via Cloud Functions
+    // Claim history is an immutable, append-only log
+    match /claims/{claimId}/history/{eventId} {
+      allow create: if request.auth != null; // Requester and admin can append
+      allow read: if request.auth != null && (get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['claims', 'manager', 'admin']);
+      allow update, delete: if false;
     }
 
-    // Admin-only settings
-    match /admin/{docId} {
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Invites can only be read/written by admins
+    match /invites/{inviteId} {
+        // Allow public read for token verification on the invite page
+        allow read: if true;
+        allow list, create, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Audit logs are append-only for any authenticated user
+    match /auditLogs/{logId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Only admins can read audit logs
+      allow list, update, delete: if false;
     }
   }
 }

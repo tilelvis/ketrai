@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { collection, getDocs, doc, updateDoc, query, orderBy, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { Profile } from "@/store/profile";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Users, Mail, Clock, Ban } from "lucide-react";
+import { RefreshCw, Users, Mail, Ban } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { InviteForm } from "./invite-form";
+import { logEvent } from "@/lib/audit-log";
+import { useProfileStore } from "@/store/profile";
 
 type Invite = {
     id: string;
@@ -145,6 +147,7 @@ function InvitesTable() {
 export default function UsersPage() {
     const [users, setUsers] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
+    const { profile: adminProfile } = useProfileStore();
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -164,11 +167,27 @@ export default function UsersPage() {
         fetchUsers();
     }, [fetchUsers]);
 
-    async function updateRole(uid: string, role: Profile["role"]) {
+    async function updateRole(uid: string, newRole: Profile["role"]) {
+        const admin = auth.currentUser;
+        if (!admin || !adminProfile) return;
+
+        const originalUser = users.find(u => u.uid === uid);
+        if (!originalUser) return;
+        const originalRole = originalUser.role;
+
         try {
-            await updateDoc(doc(db, "users", uid), { role });
-            setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role } : u)));
+            await updateDoc(doc(db, "users", uid), { role: newRole });
+            setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role: newRole } : u)));
             toast.success("Role updated successfully!");
+
+            await logEvent(
+                "user_role_changed",
+                admin.uid,
+                adminProfile.role,
+                { id: uid, collection: "users" },
+                { details: `User role changed from '${originalRole}' to '${newRole}'.` }
+            );
+
         } catch (err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred";
             toast.error(`Failed to update role: ${message}`);
@@ -176,11 +195,23 @@ export default function UsersPage() {
     }
 
     async function toggleStatus(uid: string, status: Profile["status"]) {
+        const admin = auth.currentUser;
+        if (!admin || !adminProfile) return;
+
         const newStatus = status === "active" ? "inactive" : "active";
         try {
             await updateDoc(doc(db, "users", uid), { status: newStatus });
             setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, status: newStatus } : u)));
             toast.success(`User ${newStatus === "active" ? "activated" : "deactivated"}`);
+
+            await logEvent(
+                `user_${newStatus}`,
+                admin.uid,
+                adminProfile.role,
+                { id: uid, collection: "users" },
+                { details: `User account status set to '${newStatus}'.` }
+            );
+
         } catch (err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred";
             toast.error(`Failed to update status: ${message}`);
@@ -291,5 +322,3 @@ export default function UsersPage() {
         </RoleGate>
     );
 }
-
-    

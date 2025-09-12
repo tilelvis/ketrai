@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db, setDoc, doc } from "@/lib/firebase";
+import { auth, db, setDoc, doc, fetchUserProfile } from "@/lib/firebase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { notify } from "@/lib/notify";
 import { Logo } from "@/components/icons";
 import { Profile } from "@/store/profile";
+import { logEvent } from "@/lib/audit-log";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,26 +35,47 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Create user profile document immediately after signup
-        const profile: Profile = {
-          uid: user.uid,
-          email: user.email,
-          name: user.email?.split('@')[0] ?? "New User",
-          role: "dispatcher",
-          theme: "system",
-          status: "active",
-          photoURL: user.photoURL ?? "",
-        };
-        await setDoc(doc(db, "users", user.uid), profile);
+        // This will create the user profile with default preferences
+        const profile = await fetchUserProfile(user);
+
+        await logEvent(
+          "user_created",
+          user.uid,
+          profile.role,
+          { id: user.uid, collection: "users" },
+          { details: "User created via email/password sign-up." }
+        );
 
       } else {
         await signInWithEmailAndPassword(auth, email, password);
+        // We log the sign-in event after successful authentication
+        // Ideally, this is done after the profile is fetched in the dashboard layout,
+        // but for simplicity, we do it here. The role might be stale if changed recently.
+         if (auth.currentUser) {
+           const profile = await fetchUserProfile(auth.currentUser);
+            await logEvent(
+                "user_login_success",
+                auth.currentUser.uid,
+                profile.role,
+                { id: auth.currentUser.uid, collection: "users" },
+                { details: "User signed in successfully." }
+            );
+         }
       }
       notify.success(isSignup ? "Account created successfully!" : "Login successful!");
       router.push("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unknown error occurred.";
       notify.error(`Authentication failed: ${message}`);
+       if (auth.currentUser) {
+            await logEvent(
+                "user_login_failed",
+                email, // Use email as actorId since UID is not available on failure
+                "unknown",
+                { id: email, collection: "auth" },
+                { error: message }
+            );
+        }
     } finally {
       setLoading(false);
     }
