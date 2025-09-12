@@ -1,9 +1,10 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // -------------------------
-    // helper: check role membership
+    // Utility: role helper
     // -------------------------
     function hasRole(roles) {
       return request.auth != null && request.auth.token.role in roles;
@@ -13,6 +14,7 @@ service cloud.firestore {
     // USERS
     // -------------------------
     match /users/{userId} {
+      // User can read/update their own profile
       allow get: if request.auth.uid == userId || hasRole(['admin']);
       allow update: if request.auth.uid == userId || hasRole(['admin']);
       allow create: if request.auth.uid == userId;
@@ -29,62 +31,69 @@ service cloud.firestore {
     // -------------------------
     match /invites/{inviteId} {
       allow create: if hasRole(['admin']);
-      allow read: if true;                // accept via link
-      allow update: if true;
-      allow delete: if false;
+      allow read: if true; // anyone with link
+      allow update: if true; // for accepting/declining
     }
 
     // -------------------------
     // CLAIMS
     // -------------------------
     match /claims/{claimId} {
+      // Any authenticated user/support can raise
       allow create: if request.auth != null;
+
+      // Admin/claims/manager can list all claims
       allow list: if hasRole(['admin', 'claims', 'manager']);
+
+      // Admin/claims/manager can read individual claims
       allow get: if hasRole(['admin', 'claims', 'manager'])
-                  || (request.auth != null && resource.data.requesterId == request.auth.uid);
+        || (request.auth != null && resource.data.requesterId == request.auth.uid);
+
+      // Only admin & claims team can update
       allow update: if hasRole(['admin', 'claims']);
+
+      // Prevent deletion
       allow delete: if false;
 
-      // claim history: append-only
+      // Claim history (append-only)
       match /history/{eventId} {
         // Admins/Claims can create. The user requesting the claim can also create the initial history event.
         allow create: if hasRole(['admin', 'claims']) || request.auth.uid == request.resource.data.requesterId;
-        allow get: if hasRole(['admin', 'claims', 'manager'])
-                   || (request.auth != null && get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid);
+        allow read: if hasRole(['admin', 'claims', 'manager'])
+          || (request.auth != null
+            && get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid);
         allow update, delete: if false;
       }
     }
 
     // -------------------------
-    // DISPATCH JOBS
+    // DISPATCH
     // -------------------------
     match /dispatch/{jobId} {
-      allow create, update, get, list: if hasRole(['admin', 'dispatcher', 'manager']);
-      // couriers can read/update only assigned jobs (ensure assignedCouriers is an array of UIDs)
-      allow get, update: if request.auth != null && request.auth.uid in resource.data.assignedCouriers;
-      allow delete: if false;
+      allow read, write: if hasRole(['admin', 'dispatcher', 'manager']);
     }
-    
+
     // -------------------------
     // AUDIT LOGS
     // -------------------------
     match /auditLogs/{logId} {
-      // allow admins + managers to read/list audit logs
-      allow get, list: if hasRole(['admin', 'manager']);
+      // Only admin can read logs
+      allow read: if hasRole(['admin']);
 
-      // allow authenticated clients (or server) to create audit logs
+      // All authenticated users can write (append-only)
       allow create: if request.auth != null;
 
-      // no edits or deletes allowed
+      // No edits/deletes allowed
       allow update, delete: if false;
     }
 
-     // -------------------------
-    // FAILED AUDIT LOGS
     // -------------------------
-    match /failedAuditLogs/{logId} {
-      allow read, list, create: if hasRole(['admin']);
-      allow update, delete: if false;
+    // CLAIMS QUEUE (Optional: lightweight view for dashboards)
+    // -------------------------
+    match /claimsQueue/{queueId} {
+      allow list, get: if hasRole(['admin', 'claims', 'manager']);
+      allow create, update: if hasRole(['admin', 'claims']);
+      allow delete: if false;
     }
   }
 }
