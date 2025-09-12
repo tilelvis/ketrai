@@ -57,7 +57,7 @@ service cloud.firestore {
 
       // Claim history (append-only)
       match /history/{eventId} {
-        allow create: if hasRole(['admin', 'claims']);
+        allow create: if hasRole(['admin', 'claims']) || request.auth.uid == request.resource.data.by;
         allow read: if hasRole(['admin', 'claims', 'manager'])
           || (request.auth != null 
             && get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid);
@@ -84,6 +84,15 @@ service cloud.firestore {
 
       // No edits/deletes allowed
       allow update, delete: if false;
+    }
+
+    // -------------------------
+    // CLAIMS QUEUE (Optional: lightweight view for dashboards)
+    // -------------------------
+    match /claimsQueue/{queueId} {
+      allow list, get: if hasRole(['admin', 'claims', 'manager']);
+      allow create, update: if hasRole(['admin', 'claims']);
+      allow delete: if false;
     }
   }
 }
