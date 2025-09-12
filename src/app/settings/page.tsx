@@ -17,6 +17,7 @@ import { Loader2, Palette, BellRing, LayoutGrid } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "next-themes";
+import { logEvent } from "@/lib/audit-log";
 
 const settingsSchema = z.object({
   theme: z.enum(["light", "dark", "system"]),
@@ -65,6 +66,14 @@ export default function SettingsPage() {
       const updatedProfile = { ...profile, preferences: values };
       setProfile(updatedProfile);
       setNextTheme(values.theme);
+      
+      await logEvent(
+        "preferences_updated",
+        profile.uid,
+        profile.role,
+        { id: profile.uid, collection: "users" },
+        { details: `User updated their application preferences.` }
+      );
 
       toast.success("Preferences saved successfully!");
     } catch (err) {

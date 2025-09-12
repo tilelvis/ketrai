@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,26 +10,23 @@ import { db } from "@/lib/firebase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { notify } from "@/lib/notify";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTheme } from "next-themes";
+import { logEvent } from "@/lib/audit-log";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   photoURL: z.string().url("Must be a valid URL.").optional().or(z.literal("")),
-  theme: z.enum(["light", "dark", "system"]),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
   const { profile, setProfile } = useProfileStore();
-  const { setTheme: setNextTheme } = useTheme();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
@@ -38,7 +34,6 @@ export default function ProfilePage() {
     defaultValues: {
       name: "",
       photoURL: "",
-      theme: "system",
     },
   });
 
@@ -47,7 +42,6 @@ export default function ProfilePage() {
       form.reset({
         name: profile.name,
         photoURL: profile.photoURL ?? "",
-        theme: profile.theme,
       });
     }
   }, [profile, form]);
@@ -61,8 +55,17 @@ export default function ProfilePage() {
       const ref = doc(db, "users", profile.uid);
       await updateDoc(ref, values);
 
-      setProfile({ ...profile, ...values });
-      setNextTheme(values.theme);
+      const updatedProfile = { ...profile, ...values };
+      setProfile(updatedProfile);
+
+      await logEvent(
+        "profile_updated",
+        profile.uid,
+        profile.role,
+        { id: profile.uid, collection: "users" },
+        { details: `User updated their name or photoURL.` }
+      );
+      
       notify.success("Profile updated successfully!");
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -113,7 +116,7 @@ export default function ProfilePage() {
         <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight font-headline">Profile Settings</h1>
             <p className="text-muted-foreground">
-                Manage your personal information and application preferences.
+                Manage your personal information.
             </p>
         </div>
         <Separator />
@@ -154,37 +157,6 @@ export default function ProfilePage() {
                                 <FormControl>
                                     <Input placeholder="Your name" {...field} />
                                 </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
-
-                 <Card className="mt-6">
-                    <CardHeader>
-                        <CardTitle>Preferences</CardTitle>
-                        <CardDescription>Adjust your application settings.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6 pt-6">
-                         <FormField
-                            control={form.control}
-                            name="theme"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Theme</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select theme" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="system">System</SelectItem>
-                                        <SelectItem value="light">Light</SelectItem>
-                                        <SelectItem value="dark">Dark</SelectItem>
-                                    </SelectContent>
-                                </Select>
                                 <FormMessage />
                                 </FormItem>
                             )}

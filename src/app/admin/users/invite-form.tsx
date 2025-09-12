@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -13,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MailPlus, Loader2 } from "lucide-react";
 import type { Profile } from "@/store/profile";
 import { useProfileStore } from "@/store/profile";
+import { logEvent } from "@/lib/audit-log";
 
 
 function generateToken() {
@@ -45,7 +45,7 @@ export function InviteForm() {
       const token = generateToken();
       const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3); // 3 days expiry
 
-      await addDoc(collection(db, "invites"), {
+      const inviteRef = await addDoc(collection(db, "invites"), {
         email,
         role,
         status: "pending",
@@ -57,6 +57,14 @@ export function InviteForm() {
             email: profile.email,
         }
       });
+      
+      await logEvent(
+        "user_invited",
+        profile.uid,
+        profile.role,
+        { id: inviteRef.id, collection: "invites" },
+        { invitedEmail: email, assignedRole: role }
+      );
 
       const inviteLink = `${window.location.origin}/invite/${token}`;
 

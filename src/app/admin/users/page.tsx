@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -181,11 +180,11 @@ export default function UsersPage() {
             toast.success("Role updated successfully!");
 
             await logEvent(
-                "user_role_changed",
+                "user_role_updated",
                 admin.uid,
                 adminProfile.role,
                 { id: uid, collection: "users" },
-                { details: `User role changed from '${originalRole}' to '${newRole}'.` }
+                { details: `User role changed from '${originalRole}' to '${newRole}'.`, previousRole: originalRole, newRole: newRole }
             );
 
         } catch (err) {
@@ -205,7 +204,7 @@ export default function UsersPage() {
             toast.success(`User ${newStatus === "active" ? "activated" : "deactivated"}`);
 
             await logEvent(
-                `user_${newStatus}`,
+                newStatus === 'active' ? "user_activated" : "user_deactivated",
                 admin.uid,
                 adminProfile.role,
                 { id: uid, collection: "users" },
