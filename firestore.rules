@@ -1,70 +1,70 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions for RBAC
-    function isAuth() { return request.auth != null; }
-    function uid() { return request.auth.uid; }
-    function getRole() { return get(/databases/$(database)/documents/users/$(uid())).data.role; }
-    function isAdmin() { return getRole() == 'admin'; }
-    function isManager() { return getRole() == 'manager'; }
-    function isClaims() { return getRole() == 'claims'; }
-    function isDispatcher() { return getRole() == 'dispatcher'; }
-    function isSupport() { return getRole() == 'support'; }
-    function isManagerOrAdmin() { return isManager() || isAdmin(); }
-
-    // User profiles can be read by their owner or admins/managers.
-    // Users can only update their own profile.
+    
+    // Helper functions for role checks
+    function isRole(role) {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isOneOfRoles(roles) {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+    }
+    
+    // User profile rules
     match /users/{userId} {
-      allow read: if isAuth() && (userId == uid() || isManagerOrAdmin());
-      allow create: if isAuth(); // For new sign-ups
-      allow update: if isAuth() && userId == uid(); // Users can update their own profile
-      allow delete: if false;
+      // Allow any authenticated user to read any user profile.
+      // This is necessary for fetching profile data (like names/roles) throughout the app.
+      allow read: if request.auth != null;
+      
+      // A user can update their own profile.
+      allow update: if request.auth != null && request.auth.uid == userId;
+      
+      // Only admins can create or delete users (though creation is handled via auth triggers).
+      allow create, delete: if isRole('admin');
 
-      // Notifications are private to the user.
-      match /notifications/{notifId} {
-        allow read, update, delete: if isAuth() && userId == uid();
-        // Creation is done by server-side logic (Cloud Functions), not directly by clients.
-        // We leave this open for backend processes.
-        allow create: if isAuth();
+      // User-specific subcollections
+      match /notifications/{notificationId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
-
-    // Claims:
-    // - Any authenticated user can create.
-    // - Requester, claims officers, managers, and admins can read.
-    // - Only claims officers and admins can update the status.
+    
+    // Claims rules
     match /claims/{claimId} {
-      allow create: if isAuth();
-      allow read: if isAuth() && (resource.data.requesterId == uid() || isClaims() || isManagerOrAdmin());
-      allow update: if isAuth() && (isClaims() || isAdmin());
+      // Allow specific roles to create claims.
+      allow create: if isOneOfRoles(['dispatcher', 'support', 'claims', 'manager', 'admin']);
+      
+      // Allow users to read their own claims, and certain roles to read all claims.
+      allow read: if (resource.data.requesterId == request.auth.uid) || isOneOfRoles(['claims', 'manager', 'admin']);
+      
+      // Only claims officers and admins can update claim status.
+      allow update: if isOneOfRoles(['claims', 'admin']);
+      
+      // Disallow deleting claims.
       allow delete: if false;
 
-      // Claim history is append-only.
-      // Readable by the same roles who can read the parent claim.
-      match /history/{eventId} {
-        allow create: if isAuth(); // Created by backend logic
-        allow read: if isAuth() && (get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == uid() || isClaims() || isManagerOrAdmin());
+      // Claim history subcollection
+      match /history/{historyId} {
+        // Only allow creating history entries, not updating/deleting them.
+        allow create: if request.auth != null;
+        allow read: if (get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid) || isOneOfRoles(['claims', 'manager', 'admin']);
         allow update, delete: if false;
       }
     }
-
-    // Dispatch jobs: 
-    // - Can be created by dispatchers or admins.
-    // - Can be read by assigned courier, manager, or admin.
-    // - Can be updated by assigned courier (status), dispatcher, or admin.
-    match /dispatch/{jobId} {
-      allow create: if isAuth() && (isDispatcher() || isAdmin());
-      allow read: if isAuth() && (resource.data.courierId == uid() || isManagerOrAdmin());
-      allow update: if isAuth() && (resource.data.courierId == uid() || isDispatcher() || isAdmin());
-      allow delete: if false;
+    
+    // Audit logs are append-only for any authenticated user, but only readable by admins.
+    match /auditLogs/{logId} {
+      allow create: if request.auth != null;
+      allow read: if isRole('admin');
+      allow update, delete: if false;
     }
 
-    // Audit logs are immutable and can only be read by managers/admins.
-    match /auditLogs/{logId} {
-      allow create: if isAuth(); // Any authenticated action can generate a log entry
-      allow read: if isAuth() && isManagerOrAdmin();
-      allow update, delete: if false;
+    // Invites can be created/read by admins and read by anyone with the token (for the invite page).
+    match /invites/{inviteId} {
+        allow read, create, update: if isRole('admin');
+        // Public read for the invite page logic is handled implicitly by queries,
+        // but we add this for clarity. A specific rule for the invite page query may be needed.
+        allow get: if true; 
     }
   }
 }
