@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -94,7 +93,10 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
         ? "Track the status of your submitted insurance claim requests." 
         : "View a complete history of all submitted claims.";
 
-    const allowedRoles = isPersonalView ? ['dispatcher', 'support', 'claims'] : ["claims", "manager", "admin"];
+    // Define roles that can access this page view
+    const allowedRoles: string[] = isPersonalView 
+        ? ['dispatcher', 'support', 'claims', 'manager', 'admin'] // Anyone can see their own
+        : ['claims', 'manager', 'admin']; // Only these roles can see the full history
 
     return (
         <RoleGate roles={allowedRoles}>

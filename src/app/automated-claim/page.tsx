@@ -1,13 +1,11 @@
-
 "use client";
 
-import { useState } from "react";
-import { AutomatedClaimForm } from "@/components/forms/automated-claim-form";
-import { Separator } from "@/components/ui/separator";
 import { useProfileStore } from "@/store/profile";
 import { RoleGate } from "@/components/role-gate";
+import { Separator } from "@/components/ui/separator";
 import ClaimsHistoryPage from "../claims-history/page";
 import ClaimsQueue from "./claims-queue";
+import { AutomatedClaimForm } from "@/components/forms/automated-claim-form";
 
 export default function AutomatedClaimPage() {
   const { profile } = useProfileStore();
@@ -19,7 +17,7 @@ export default function AutomatedClaimPage() {
   
   // Other roles (dispatcher, support) see the submission flow and their own history
   return (
-    <RoleGate roles={['dispatcher', 'support', 'claims']}>
+    <RoleGate roles={['dispatcher', 'support']}>
         <div className="space-y-6">
             <div className="space-y-1">
                 <h1 className="text-2xl font-bold tracking-tight font-headline">Automated Claim Request</h1>
