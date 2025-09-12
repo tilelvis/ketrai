@@ -1,43 +1,89 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function hasRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
-    
-    function isOneOfRoles(roles) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+
+    // -------------------------
+    // Utility: role helper
+    // -------------------------
+    function hasRole(roles) {
+      return request.auth != null && request.auth.token.role in roles;
     }
 
+    // -------------------------
+    // USERS
+    // -------------------------
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId || hasRole('admin');
-      allow list: if hasRole('admin');
+      // User can read/update their own profile
+      allow get: if request.auth.uid == userId || hasRole(['admin']);
+      allow update: if request.auth.uid == userId || hasRole(['admin']);
       allow create: if request.auth.uid == userId;
+      allow list: if hasRole(['admin']);
+
+      // Notifications - private to user
+      match /notifications/{notificationId} {
+        allow read, write, delete: if request.auth.uid == userId;
+      }
     }
 
+    // -------------------------
+    // INVITES
+    // -------------------------
     match /invites/{inviteId} {
-      allow create: if hasRole('admin');
-      allow read: if true;
-      allow update: if hasRole('admin') || request.auth.uid != null;
+      allow create: if hasRole(['admin']);
+      allow read: if true; // anyone with link
+      allow update: if true; // for accepting/declining
     }
-    
+
+    // -------------------------
+    // CLAIMS
+    // -------------------------
     match /claims/{claimId} {
+      // Any authenticated user/support can raise
       allow create: if request.auth != null;
-      allow read: if isOneOfRoles(['claims', 'manager', 'admin']) || resource.data.requesterId == request.auth.uid;
-      allow update: if isOneOfRoles(['claims', 'admin']);
-      
+
+      // Admin/claims/manager can list all claims
+      allow list: if hasRole(['admin', 'claims', 'manager']);
+
+      // Admin/claims/manager can read individual claims
+      allow get: if hasRole(['admin', 'claims', 'manager'])
+        || (request.auth != null && resource.data.requesterId == request.auth.uid);
+
+      // Only admin & claims team can update
+      allow update: if hasRole(['admin', 'claims']);
+
+      // Prevent deletion
+      allow delete: if false;
+
+      // Claim history (append-only)
       match /history/{eventId} {
-        allow create: if request.auth != null;
-        allow read: if isOneOfRoles(['claims', 'manager', 'admin']) || get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid;
+        allow create: if hasRole(['admin', 'claims']);
+        allow read: if hasRole(['admin', 'claims', 'manager'])
+          || (request.auth != null 
+            && get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid);
         allow update, delete: if false;
       }
     }
-    
+
+    // -------------------------
+    // DISPATCH
+    // -------------------------
+    match /dispatch/{jobId} {
+      allow read, write: if hasRole(['admin', 'dispatcher', 'manager']);
+    }
+
+    // -------------------------
+    // AUDIT LOGS
+    // -------------------------
     match /auditLogs/{logId} {
-      allow read: if hasRole('admin');
+      // Only admin can read logs
+      allow read: if hasRole(['admin']);
+
+      // All authenticated users can write (append-only)
       allow create: if request.auth != null;
-      allow update, delete: if false; 
+
+      // No edits/deletes allowed
+      allow update, delete: if false;
     }
   }
 }
