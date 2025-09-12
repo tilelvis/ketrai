@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, Timestamp, where } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
@@ -29,47 +29,49 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
     const [claims, setClaims] = useState<Claim[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchClaims = useCallback(async () => {
-        if (!auth.currentUser) return;
-        setLoading(true);
-        try {
-            let claimsQuery;
-            const claimsCollection = collection(db, "claims");
-
-            if (isPersonalView) {
-                claimsQuery = query(claimsCollection, where("requesterId", "==", auth.currentUser.uid), orderBy("createdAt", "desc"));
-            } else {
-                 if (profile?.role && ['admin', 'manager', 'claims'].includes(profile.role)) {
-                    claimsQuery = query(claimsCollection, orderBy("createdAt", "desc"));
-                 } else {
-                    setClaims([]);
-                    setLoading(false);
-                    return;
-                 }
-            }
-            
-            const snap = await getDocs(claimsQuery);
-            const data: Claim[] = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Claim));
-            setClaims(data);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "An unknown error occurred";
-            toast.error(`Failed to fetch claims: ${message}`);
-        } finally {
+    const subscribeToClaims = useCallback(() => {
+        const user = auth.currentUser;
+        if (!user) {
             setLoading(false);
+            setClaims([]);
+            return () => {}; // Return an empty unsubscribe function
         }
+
+        setLoading(true);
+        
+        let claimsQuery;
+        const claimsCollection = collection(db, "claims");
+
+        if (isPersonalView) {
+            claimsQuery = query(claimsCollection, where("requesterId", "==", user.uid), orderBy("createdAt", "desc"));
+        } else {
+             if (profile?.role && ['admin', 'manager', 'claims'].includes(profile.role)) {
+                claimsQuery = query(claimsCollection, orderBy("createdAt", "desc"));
+             } else {
+                setClaims([]);
+                setLoading(false);
+                return () => {};
+             }
+        }
+        
+        const unsubscribe = onSnapshot(claimsQuery, (snapshot) => {
+            const data: Claim[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Claim));
+            setClaims(data);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching real-time claims:", error);
+            toast.error("Failed to connect to claims history.");
+            setLoading(false);
+        });
+        
+        return unsubscribe;
     }, [isPersonalView, profile?.role]);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(user => {
-            if (user) {
-                fetchClaims();
-            } else {
-                setLoading(false);
-                setClaims([]);
-            }
-        });
-        return () => unsubscribe();
-    }, [fetchClaims]);
+        const unsubscribe = subscribeToClaims();
+        return () => unsubscribe(); // This will unsubscribe when the component unmounts
+    }, [subscribeToClaims]);
+
 
     const getStatusVariant = (status: Claim['status']) => {
         switch (status) {
@@ -118,10 +120,6 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
                                 <ClipboardList className="h-5 w-5 text-primary" />
                                 <CardTitle>{isPersonalView ? "My Requests" : "All Claims"}</CardTitle>
                                 </div>
-                            <Button variant="outline" size="sm" onClick={fetchClaims} disabled={loading}>
-                                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                Refresh
-                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
