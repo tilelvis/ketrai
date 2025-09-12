@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A centralized utility for creating audit log entries in Firestore.

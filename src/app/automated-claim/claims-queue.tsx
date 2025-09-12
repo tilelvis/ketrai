@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -10,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, ClipboardList, Check, X } from "lucide-react";
+import { ClipboardList, Check, X, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { approveClaim, rejectClaim } from "@/lib/claims";
 import {
@@ -44,7 +43,7 @@ function RejectClaimDialog({ claimId, onComplete }: { claimId: string; onComplet
         try {
             await rejectClaim(claimId, reason);
             toast.success("Claim rejected.");
-            onComplete();
+            onComplete(); // This will close the dialog via its parent
         } catch (err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred.";
             toast.error(`Failed to reject claim: ${message}`);
@@ -76,6 +75,7 @@ function RejectClaimDialog({ claimId, onComplete }: { claimId: string; onComplet
                          <Button variant="outline">Cancel</Button>
                     </DialogTrigger>
                     <Button onClick={handleReject} disabled={loading || !reason}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {loading ? "Rejecting..." : "Confirm Rejection"}
                     </Button>
                 </DialogFooter>
@@ -89,24 +89,30 @@ export default function ClaimsQueue() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
-    const fetchClaims = useCallback(async () => {
-        setLoading(true);
-        try {
-            const claimsQuery = query(collection(db, "claims"), where("status", "==", "requested"), orderBy("createdAt", "asc"));
-            const snap = await getDocs(claimsQuery);
-            const data: Claim[] = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Claim));
+    const subscribeToClaims = useCallback(() => {
+        const q = query(
+            collection(db, "claims"), 
+            where("status", "==", "requested"), 
+            orderBy("createdAt", "asc")
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data: Claim[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Claim));
             setClaims(data);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "An unknown error occurred";
-            toast.error(`Failed to fetch claims: ${message}`);
-        } finally {
             setLoading(false);
-        }
+        }, (error) => {
+            console.error("Error fetching real-time claims:", error);
+            toast.error("Failed to connect to the claims queue.");
+            setLoading(false);
+        });
+        
+        return unsubscribe;
     }, []);
 
     useEffect(() => {
-        fetchClaims();
-    }, [fetchClaims]);
+        const unsubscribe = subscribeToClaims();
+        return () => unsubscribe();
+    }, [subscribeToClaims]);
 
     async function handleApprove(claimId: string) {
         setActionLoading(prev => ({...prev, [claimId]: true}));
@@ -114,7 +120,7 @@ export default function ClaimsQueue() {
         try {
             await approveClaim(claimId);
             toast.success("Claim approved successfully!");
-            fetchClaims();
+            // No need to fetch manually, onSnapshot will update the UI
         } catch(err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred.";
             toast.error(`Failed to approve claim: ${message}`);
@@ -137,10 +143,6 @@ export default function ClaimsQueue() {
                             <ClipboardList className="h-5 w-5 text-primary" />
                             <CardTitle>Pending Requests</CardTitle>
                             </div>
-                        <Button variant="outline" size="sm" onClick={fetchClaims} disabled={loading}>
-                            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </Button>
                     </div>
                     <CardDescription>These are new claims that require review and action.</CardDescription>
                 </CardHeader>
@@ -184,7 +186,7 @@ export default function ClaimsQueue() {
                                         <Check className="mr-2 h-4 w-4" />
                                         Approve
                                     </Button>
-                                    <RejectClaimDialog claimId={c.id} onComplete={fetchClaims} />
+                                    <RejectClaimDialog claimId={c.id} onComplete={() => { /* onSnapshot handles UI */ }} />
                                 </TableCell>
                             </TableRow>
                         ))}

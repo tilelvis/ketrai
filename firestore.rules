@@ -2,61 +2,81 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to get user's role
+
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
     function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
-    
-    // USERS: Users can read their own profile. Admins can read any profile.
+
+    function isAdmin() {
+        return getRole() == 'admin';
+    }
+
+    // Users Collection
     match /users/{userId} {
-      allow read: if request.auth.uid == userId 
-                  || getRole() == 'admin';
-      allow write: if request.auth.uid == userId;
-    }
-    
-    // INVITES: Logged-in users can read invites (for token verification). Admins can create/update.
-    match /invites/{inviteId} {
-      allow read: if request.auth != null;
-      allow create, update: if getRole() == 'admin';
-    }
-
-    // CLAIMS:
-    match /claims/{claimId} {
-      // CREATE: dispatcher, support, and claims can create claims
-      allow create: if getRole() in ['dispatcher', 'support', 'claims'];
-      
-      // READ: Users can read their own claims. claims, manager, and admin can read any claim.
-      allow get: if request.auth.uid == resource.data.requesterId
-                 || getRole() in ['claims', 'manager', 'admin'];
-
-      // LIST: claims, manager, and admin can list claims for queues/history
-      allow list: if getRole() in ['claims', 'manager', 'admin'];
-      
-      // UPDATE: Only claims officers and admins can update claims (approve/reject).
-      allow update: if getRole() in ['claims', 'admin'];
-      
-      // DELETE: No one can delete claims.
+      // Any authenticated user can create their own profile (on signup)
+      allow create: if isAuth();
+      // Only the user or an admin can read the profile
+      allow read: if isAuth() && (isOwner(userId) || isAdmin());
+      // Only the user or an admin can update the profile
+      allow update: if isAuth() && (isOwner(userId) || isAdmin());
+      // No one can delete a user profile through the client
       allow delete: if false;
+
+      // Notifications Sub-collection
+      match /notifications/{notificationId} {
+        // Only the profile owner can interact with their notifications
+        allow read, write, delete: if isOwner(userId);
+      }
+    }
+
+    // Claims Collection
+    match /claims/{claimId} {
+      // Dispatcher, Support, and Claims Officers can create claims
+      allow create: if isAuth() && getRole() in ['dispatcher', 'support', 'claims'];
+
+      // User can read their own claims, specific roles can read all
+      allow read: if isAuth() && (
+        isOwner(resource.data.requesterId) || getRole() in ['claims', 'manager', 'admin']
+      );
+      
+      // Admins and Claims Officers can update claims (approve/reject)
+      allow update: if isAuth() && getRole() in ['admin', 'claims'];
+      
+      // No one can delete a claim
+      allow delete: if false;
+
+      // Claim History Sub-collection (append-only)
+      match /history/{historyId} {
+        allow create: if isAuth() && getRole() in ['admin', 'claims'];
+        allow read: if isAuth() && getRole() in ['admin', 'claims', 'manager'];
+        allow update, delete: if false;
+      }
+    }
+
+    // Invites Collection (Admin only)
+    match /invites/{inviteId} {
+        // Admins can create/manage invites
+        allow read, write, create, delete: if isAuth() && isAdmin();
+        // Public can read a single invite to accept it
+        allow get: if !isAuth();
     }
     
-    // CLAIMS HISTORY: Append-only for claims officers and admins. Read-only for managers.
-    match /claims/{claimId}/history/{historyId} {
-        allow create: if getRole() in ['claims', 'admin'];
-        allow read: if getRole() in ['claims', 'manager', 'admin'];
-        allow update, delete: if false;
-    }
-
-    // NOTIFICATIONS: Users can only access their own notifications.
-    match /users/{userId}/notifications/{notificationId} {
-      allow list, read, create, delete: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId; // To mark as read
-    }
-
-    // AUDIT LOGS: Append-only for all authenticated users. No one can update or delete.
+    // Audit Logs Collection (Immutable, append-only)
     match /auditLogs/{logId} {
-      allow create: if request.auth != null;
-      allow read: if getRole() == 'admin';
+      // Any authenticated user action can trigger a log creation
+      allow create: if isAuth(); 
+      // Only admins can read audit logs
+      allow list, get: if isAuth() && isAdmin();
+      // Logs are immutable, no updates or deletes allowed
       allow update, delete: if false;
     }
   }

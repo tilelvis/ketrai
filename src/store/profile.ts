@@ -8,7 +8,7 @@ export type Profile = {
   role: "dispatcher" | "manager" | "claims" | "admin" | "support";
   status: "active" | "inactive";
   photoURL?: string;
-  preferences: {
+  preferences?: {
     theme: "light" | "dark" | "system";
     locale: string;
     notifications: {

@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, getDocs, orderBy, query, Timestamp } from "firebase/firestore";
+import { collection, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ function LogContextDialog({ context }: { context: Record<string, any> }) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
             <FileJson className="mr-2 h-3 w-3" />
-            Details
+            View Details
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -64,23 +63,29 @@ export default function AuditLogPage() {
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchLogs = useCallback(async () => {
-        setLoading(true);
-        try {
-            const logsQuery = query(collection(db, "auditLogs"), orderBy("timestamp", "desc"));
-            const snap = await getDocs(logsQuery);
-            const data: AuditLog[] = snap.docs.map((d) => ({ id: d.id, ...d.data() } as AuditLog));
-            setLogs(data);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "An unknown error occurred";
-            toast.error(`Failed to fetch audit logs: ${message}`);
-        } finally {
+    const fetchLogs = useCallback(() => {
+        const q = query(
+            collection(db, "auditLogs"),
+            orderBy("timestamp", "desc"),
+            limit(100)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedLogs: AuditLog[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditLog));
+            setLogs(fetchedLogs);
             setLoading(false);
-        }
+        }, (error) => {
+            console.error("Error fetching audit logs:", error);
+            toast.error("Failed to fetch audit logs in real-time.");
+            setLoading(false);
+        });
+
+        return unsubscribe;
     }, []);
 
     useEffect(() => {
-        fetchLogs();
+        const unsubscribe = fetchLogs();
+        return () => unsubscribe();
     }, [fetchLogs]);
 
     return (
@@ -88,7 +93,7 @@ export default function AuditLogPage() {
             <div className="space-y-6">
                 <div className="space-y-1">
                     <h1 className="text-2xl font-bold tracking-tight font-headline">Audit Log</h1>
-                    <p className="text-muted-foreground">A chronological log of all significant events in the system.</p>
+                    <p className="text-muted-foreground">A real-time, chronological log of all significant events in the system.</p>
                 </div>
                 <Separator />
 
@@ -97,12 +102,8 @@ export default function AuditLogPage() {
                         <div className="flex justify-between items-center">
                              <div className="flex items-center gap-2">
                                 <ScrollText className="h-5 w-5 text-primary" />
-                                <CardTitle>All Events</CardTitle>
+                                <CardTitle>Live Event Stream (Last 100)</CardTitle>
                              </div>
-                            <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading}>
-                                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                Refresh
-                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -136,12 +137,12 @@ export default function AuditLogPage() {
                                     <TableCell>
                                         <Badge variant="secondary" className="font-mono">{log.action}</Badge>
                                     </TableCell>
-                                    <TableCell>
-                                        <div className="font-mono text-xs max-w-24 truncate" title={log.actorId}>{log.actorId}</div>
+                                     <TableCell>
+                                        <div className="font-mono text-xs max-w-[100px] truncate" title={log.actorId}>{log.actorId}</div>
                                         <div className="capitalize text-xs text-muted-foreground">{log.actorRole}</div>
                                     </TableCell>
                                      <TableCell>
-                                        <div className="font-mono text-xs max-w-24 truncate" title={log.targetId}>{log.targetId}</div>
+                                        <div className="font-mono text-xs max-w-[100px] truncate" title={log.targetId}>{log.targetId}</div>
                                         <div className="capitalize text-xs text-muted-foreground">{log.targetCollection}</div>
                                     </TableCell>
                                     <TableCell className="text-right">
