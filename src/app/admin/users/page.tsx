@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { collection, getDocs, doc, updateDoc, query, orderBy, Timestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Profile } from "@/store/profile";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
@@ -174,22 +175,33 @@ export default function UsersPage() {
         if (!originalUser) return;
         const originalRole = originalUser.role;
 
-        try {
-            await updateDoc(doc(db, "users", uid), { role: newRole });
-            setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role: newRole } : u)));
-            toast.success("Role updated successfully!");
+        toast.info(`Updating role to ${newRole}...`);
 
-            await logEvent(
-                "user_role_updated",
-                admin.uid,
-                adminProfile.role,
-                { id: uid, collection: "users" },
-                { details: `User role changed from '${originalRole}' to '${newRole}'.`, previousRole: originalRole, newRole: newRole }
-            );
+        try {
+            const functions = getFunctions();
+            const setRole = httpsCallable(functions, 'setRole');
+            const response = await setRole({ uid, role: newRole });
+
+            if (response.data.success) {
+                setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role: newRole } : u)));
+                toast.success("Role updated successfully! User must sign out and back in for changes to apply.");
+
+                await logEvent(
+                    "user_role_updated",
+                    admin.uid,
+                    adminProfile.role,
+                    { id: uid, collection: "users" },
+                    { details: `User role changed from '${originalRole}' to '${newRole}'.`, previousRole: originalRole, newRole: newRole }
+                );
+            } else {
+                 throw new Error(response.data.error);
+            }
 
         } catch (err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred";
             toast.error(`Failed to update role: ${message}`);
+            // Revert UI on failure
+            setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role: originalRole } : u)));
         }
     }
 

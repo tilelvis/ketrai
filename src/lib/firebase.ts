@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, serverTimestamp, writeBatch, deleteDoc, query, orderBy, onSnapshot, where, Timestamp, addDoc } from "firebase/firestore";
@@ -37,12 +36,16 @@ export async function fetchUserProfile(user: User) {
       uid: user.uid,
       email: user.email,
       name: user.displayName ?? user.email?.split('@')[0] ?? "New User",
-      role: "dispatcher",
+      role: "dispatcher", // Default role for new signups
       status: "active",
       photoURL: user.photoURL ?? "",
       preferences: defaultPreferences
     };
     await setDoc(ref, newProfile);
+    
+    // NOTE: In a real app, you would likely trigger a Cloud Function here
+    // to set the initial custom claim for the new user's role.
+    
     return newProfile;
   }
 
