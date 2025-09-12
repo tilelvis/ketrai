@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -9,12 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { notify } from "@/lib/notify";
 import type { ProactiveEtaCalculationOutput } from "@/ai/flows/proactive-eta-calculation";
+import { useProfileStore } from "@/store/profile";
 
 export function ProactiveEtaForm({
   onComplete,
 }: {
   onComplete: (result: ProactiveEtaCalculationOutput) => void;
 }) {
+  const { profile } = useProfileStore();
   const [route, setRoute] = useState("Route from Nairobi CBD to a customer in Ruaka.");
   const [plannedEta, setPlannedEta] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString());
   const [traffic, setTraffic] = useState("Heavy traffic on Waiyaki Way, accident near ABC Place.");
@@ -23,11 +24,16 @@ export function ProactiveEtaForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!profile) {
+      notify.error("You must be logged in to perform this action.");
+      return;
+    }
     setLoading(true);
     notify.info("Recalculating ETA...", "eta");
 
     try {
-      const result = await runProactiveEta({ route, plannedEta, traffic, weather });
+      const actor = { uid: profile.uid, role: profile.role };
+      const result = await runProactiveEta({ route, plannedEta, traffic, weather }, actor);
 
       if (result.riskLevel === "high") {
         notify.risk(`High risk of delay for route: ${route}`, "high", "eta");

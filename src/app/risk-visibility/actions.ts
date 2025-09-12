@@ -2,22 +2,22 @@
 
 import { crossCarrierRiskVisibility } from "@/ai/flows/cross-carrier-risk-visibility";
 import type { CrossCarrierRiskVisibilityInput } from "@/ai/flows/cross-carrier-risk-visibility";
-import { auth } from "@/lib/firebase";
 import { logEvent } from "@/lib/audit-log";
-import { useProfileStore } from "@/store/profile";
+import type { Profile } from "@/store/profile";
 
-export async function runCrossCarrierVisibility(data: CrossCarrierRiskVisibilityInput) {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Not authenticated");
+type Actor = {
+    uid: string;
+    role: Profile['role'];
+}
 
-  const { profile } = useProfileStore.getState();
-  const actorRole = profile?.role || "unknown";
+export async function runCrossCarrierVisibility(data: CrossCarrierRiskVisibilityInput, actor: Actor) {
+  if (!actor || !actor.uid) throw new Error("Not authenticated");
 
   try {
      await logEvent(
       "risk_analysis_requested",
-      user.uid,
-      actorRole,
+      actor.uid,
+      actor.role,
       { id: `risk-analysis-${Date.now()}`, collection: "risk-visibility" },
       { details: `Risk analysis requested for ${data.shipments.length} shipments.` }
     );
@@ -40,8 +40,8 @@ export async function runCrossCarrierVisibility(data: CrossCarrierRiskVisibility
     console.error("Cross-Carrier Visibility failed:", error);
      await logEvent(
       "risk_analysis_failed",
-      user.uid,
-      actorRole,
+      actor.uid,
+      actor.role,
       { id: `risk-analysis-${Date.now()}`, collection: "risk-visibility" },
       { error: error instanceof Error ? error.message : "Unknown error" }
     );

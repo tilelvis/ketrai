@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -15,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Route } from "lucide-react";
 import { toast } from "sonner";
+import { useProfileStore } from "@/store/profile";
 
 const formSchema = z.object({
   pickup: z.string().min(1, "Pickup location is required."),
@@ -26,6 +26,7 @@ export function SmartDispatchForm({
 }: {
   onComplete: (result: SmartDispatchRecommendationOutput) => void;
 }) {
+  const { profile } = useProfileStore();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -37,10 +38,15 @@ export function SmartDispatchForm({
   });
 
   async function handleSubmit(values: z.infer<typeof formSchema>) {
+    if (!profile) {
+        toast.error("You must be logged in to perform this action.");
+        return;
+    }
     setLoading(true);
     toast.info("Finding the best route...");
     try {
-        const result = await runSmartDispatch(values);
+        const actor = { uid: profile.uid, role: profile.role };
+        const result = await runSmartDispatch(values, actor);
         onComplete(result);
         toast.success("Optimal route found!");
     } catch (error) {

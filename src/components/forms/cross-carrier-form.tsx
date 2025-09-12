@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { PlusCircle, ShieldAlert, XCircle, Loader2 } from "lucide-react";
 import { notify } from "@/lib/notify";
+import { useProfileStore } from "@/store/profile";
 
 export function CrossCarrierForm({ onComplete }: { onComplete: (result: CrossCarrierRiskVisibilityOutput) => void }) {
+  const { profile } = useProfileStore();
   const [shipments, setShipments] = useState<any[]>([
     { carrier: "G4S", trackingNumber: "G4S12345", status: "In Transit", location: "Nairobi, KE", eta: "2024-08-01" },
     { carrier: "Wells Fargo", trackingNumber: "WF67890", status: "Delayed", location: "Mombasa, KE", eta: "2024-08-02" },
@@ -40,14 +41,19 @@ export function CrossCarrierForm({ onComplete }: { onComplete: (result: CrossCar
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!profile) {
+      notify.error("You must be logged in to perform this action.");
+      return;
+    }
     setLoading(true);
     notify.info("Analyzing shipments...", "cross-carrier");
 
     try {
+      const actor = { uid: profile.uid, role: profile.role };
       const result = await runCrossCarrierVisibility({
         shipments,
         alerts: alerts.split("\n").filter(Boolean),
-      });
+      }, actor);
 
       result.groupedRisks.forEach((risk: any) => {
         if (risk.riskType.toLowerCase().includes("weather")) {
