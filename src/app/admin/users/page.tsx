@@ -186,15 +186,16 @@ export default function UsersPage() {
                 setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role: newRole } : u)));
                 toast.success("Role updated successfully! User must sign out and back in for changes to apply.");
 
-                await logEvent(
-                    "user_role_updated",
-                    admin.uid,
-                    adminProfile.role,
-                    { id: uid, collection: "users" },
-                    { details: `User role changed from '${originalRole}' to '${newRole}'.`, previousRole: originalRole, newRole: newRole }
-                );
+                await logEvent({
+                    action: "user_role_updated",
+                    actorId: admin.uid,
+                    actorRole: adminProfile.role,
+                    targetCollection: "users",
+                    targetId: uid,
+                    context: { details: `User role changed from '${originalRole}' to '${newRole}'.`, previousRole: originalRole, newRole: newRole }
+                });
             } else {
-                 throw new Error(response.data.error);
+                 throw new Error((response.data as any).error);
             }
 
         } catch (err) {
@@ -215,13 +216,14 @@ export default function UsersPage() {
             setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, status: newStatus } : u)));
             toast.success(`User ${newStatus === "active" ? "activated" : "deactivated"}`);
 
-            await logEvent(
-                newStatus === 'active' ? "user_activated" : "user_deactivated",
-                admin.uid,
-                adminProfile.role,
-                { id: uid, collection: "users" },
-                { details: `User account status set to '${newStatus}'.` }
-            );
+            await logEvent({
+                action: newStatus === 'active' ? "user_activated" : "user_deactivated",
+                actorId: admin.uid,
+                actorRole: adminProfile.role,
+                targetCollection: "users",
+                targetId: uid,
+                context: { details: `User account status set to '${newStatus}'.` }
+            });
 
         } catch (err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred";

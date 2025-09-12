@@ -13,7 +13,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, Palette, BellRing, LayoutGrid } from "lucide-react";
+import { Loader2, Palette, BellRing } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "next-themes";
@@ -67,13 +67,14 @@ export default function SettingsPage() {
       setProfile(updatedProfile);
       setNextTheme(values.theme);
       
-      await logEvent(
-        "preferences_updated",
-        profile.uid,
-        profile.role,
-        { id: profile.uid, collection: "users" },
-        { details: `User updated their application preferences.` }
-      );
+      await logEvent({
+        action: "preferences_updated",
+        actorId: profile.uid,
+        actorRole: profile.role,
+        targetCollection: "users",
+        targetId: profile.uid,
+        context: { details: `User updated their application preferences.` }
+      });
 
       toast.success("Preferences saved successfully!");
     } catch (err) {

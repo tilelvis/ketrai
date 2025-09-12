@@ -37,28 +37,27 @@ export default function LoginPage() {
         // This will create the user profile with default preferences
         const profile = await fetchUserProfile(user) as Profile;
 
-        await logEvent(
-          "user_created",
-          user.uid,
-          profile.role,
-          { id: user.uid, collection: "users" },
-          { details: "User created via email/password sign-up." }
-        );
+        await logEvent({
+          action: "user_created",
+          actorId: user.uid,
+          actorRole: profile.role,
+          targetCollection: "users",
+          targetId: user.uid,
+          context: { details: "User created via email/password sign-up." }
+        });
 
       } else {
         await signInWithEmailAndPassword(auth, email, password);
-        // We log the sign-in event after successful authentication
-        // Ideally, this is done after the profile is fetched in the dashboard layout,
-        // but for simplicity, we do it here. The role might be stale if changed recently.
          if (auth.currentUser) {
            const profile = await fetchUserProfile(auth.currentUser) as Profile;
-            await logEvent(
-                "user_login_success",
-                auth.currentUser.uid,
-                profile.role,
-                { id: auth.currentUser.uid, collection: "users" },
-                { details: "User signed in successfully." }
-            );
+            await logEvent({
+                action: "user_login_success",
+                actorId: auth.currentUser.uid,
+                actorRole: profile.role,
+                targetCollection: "users",
+                targetId: auth.currentUser.uid,
+                context: { details: "User signed in successfully." }
+            });
          }
       }
       notify.success(isSignup ? "Account created successfully!" : "Login successful!");
@@ -67,13 +66,14 @@ export default function LoginPage() {
       const message = err instanceof Error ? err.message : "An unknown error occurred.";
       notify.error(`Authentication failed: ${message}`);
        if (!auth.currentUser) {
-            await logEvent(
-                "user_login_failed",
-                email, // Use email as actorId since UID is not available on failure
-                "unknown",
-                { id: email, collection: "auth" },
-                { error: message }
-            );
+            await logEvent({
+                action: "user_login_failed",
+                actorId: email, 
+                actorRole: "unknown",
+                targetCollection: "auth",
+                targetId: email,
+                context: { error: message }
+            });
         }
     } finally {
       setLoading(false);

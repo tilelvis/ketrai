@@ -58,13 +58,14 @@ export default function ProfilePage() {
       const updatedProfile = { ...profile, ...values };
       setProfile(updatedProfile);
 
-      await logEvent(
-        "profile_updated",
-        profile.uid,
-        profile.role,
-        { id: profile.uid, collection: "users" },
-        { details: `User updated their name or photoURL.` }
-      );
+      await logEvent({
+        action: "profile_updated",
+        actorId: profile.uid,
+        actorRole: profile.role,
+        targetCollection: "users",
+        targetId: profile.uid,
+        context: { details: `User updated their name or photoURL.` }
+      });
       
       notify.success("Profile updated successfully!");
     } catch (err) {

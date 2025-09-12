@@ -14,38 +14,41 @@ export async function runProactiveEta(data: ProactiveEtaCalculationInput, actor:
   if (!actor || !actor.uid) throw new Error("Not authenticated");
 
   try {
-    await logEvent(
-      "eta_requested",
-      actor.uid,
-      actor.role,
-      { id: `eta-${Date.now()}`, collection: "proactive-eta" },
-      { details: `ETA calculation requested for route: ${data.route}` }
-    );
+    await logEvent({
+      action: "eta_requested",
+      actorId: actor.uid,
+      actorRole: actor.role,
+      targetCollection: "proactive-eta",
+      targetId: `eta-${Date.now()}`,
+      context: { details: `ETA calculation requested for route: ${data.route}` }
+    });
 
     const result = await proactiveEtaCalculation(data);
 
-    await logEvent(
-      "eta_result_generated",
-      "system",
-      "system",
-      { id: `eta-${Date.now()}`, collection: "proactive-eta" },
-      { 
+    await logEvent({
+      action: "eta_result_generated",
+      actorId: "system",
+      actorRole: "system",
+      targetCollection: "proactive-eta",
+      targetId: `eta-${Date.now()}`,
+      context: { 
         details: `Generated ETA with risk level: ${result.riskLevel}`,
         recalculatedEta: result.recalculatedEta,
         riskLevel: result.riskLevel
       }
-    );
+    });
 
     return result;
   } catch (error) {
     console.error("Proactive ETA failed:", error);
-    await logEvent(
-      "eta_calculation_failed",
-      actor.uid,
-      actor.role,
-      { id: `eta-${Date.now()}`, collection: "proactive-eta" },
-      { error: error instanceof Error ? error.message : "Unknown error" }
-    );
+    await logEvent({
+      action: "eta_calculation_failed",
+      actorId: actor.uid,
+      actorRole: actor.role,
+      targetCollection: "proactive-eta",
+      targetId: `eta-${Date.now()}`,
+      context: { error: error instanceof Error ? error.message : "Unknown error" }
+    });
     throw new Error("Failed to calculate ETA");
   }
 }

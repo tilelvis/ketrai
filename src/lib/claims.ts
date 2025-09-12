@@ -44,19 +44,21 @@ export async function raiseClaim(claimData: RaiseClaimInput) {
     action: 'requested',
     by: user.uid,
     timestamp: serverTimestamp(),
-    details: 'Claim submitted by user'
+    details: 'Claim submitted by user',
+    requesterId: user.uid // Add requesterId here to satisfy security rules on create
   });
 
   await batch.commit();
   
   // 3. Log event to the audit log (after batch commit)
-  await logEvent(
-    "claim_requested",
-    user.uid,
-    userProfile.role,
-    { id: claimRef.id, collection: "claims" },
-    { type: claimData.type, packageId: claimData.packageId }
-  );
+  await logEvent({
+    action: "claim_requested",
+    actorId: user.uid,
+    actorRole: userProfile.role,
+    targetCollection: "claims",
+    targetId: claimRef.id,
+    context: { type: claimData.type, packageId: claimData.packageId }
+  });
 
   return claimRef.id;
 }
@@ -109,13 +111,14 @@ export async function approveClaim(claimId: string) {
   await batch.commit();
 
   // 4. Log event to the audit log
-  await logEvent(
-    "claim_approved",
-    admin.uid,
-    adminProfile.role,
-    { id: claimId, collection: "claims" },
-    { requesterId: claimData.requesterId }
-  );
+  await logEvent({
+    action: "claim_approved",
+    actorId: admin.uid,
+    actorRole: adminProfile.role,
+    targetCollection: "claims",
+    targetId: claimId,
+    context: { requesterId: claimData.requesterId }
+  });
 }
 
 /**
@@ -165,11 +168,12 @@ export async function rejectClaim(claimId: string, reason: string) {
   await batch.commit();
   
   // 4. Log event to the audit log
-  await logEvent(
-    "claim_rejected",
-    admin.uid,
-    adminProfile.role,
-    { id: claimId, collection: "claims" },
-    { reason, requesterId: claimData.requesterId }
-  );
+  await logEvent({
+    action: "claim_rejected",
+    actorId: admin.uid,
+    actorRole: adminProfile.role,
+    targetCollection: "claims",
+    targetId: claimId,
+    context: { reason, requesterId: claimData.requesterId }
+  });
 }

@@ -14,42 +14,45 @@ export async function runSmartDispatch(data: SmartDispatchRecommendationInput, a
   if (!actor || !actor.uid) throw new Error("Not authenticated");
 
   try {
-    await logEvent(
-      "dispatch_recommendation_requested",
-      actor.uid,
-      actor.role,
-      { id: `dispatch-req-${Date.now()}`, collection: "smart-dispatch" },
-      { 
+    await logEvent({
+      action: "dispatch_recommendation_requested",
+      actorId: actor.uid,
+      actorRole: actor.role,
+      targetCollection: "smart-dispatch",
+      targetId: `dispatch-req-${Date.now()}`,
+      context: { 
         details: `Recommendation requested from ${data.pickup} to ${data.dropoff}.`,
         pickup: data.pickup,
         dropoff: data.dropoff
       }
-    );
+    });
     
     const result = await smartDispatchRecommendation(data);
     
-    await logEvent(
-      "dispatch_recommended",
-      "system",
-      "system",
-      { id: `dispatch-rec-${Date.now()}`, collection: "smart-dispatch" },
-      { 
+    await logEvent({
+      action: "dispatch_recommended",
+      actorId: "system",
+      actorRole: "system",
+      targetCollection: "smart-dispatch",
+      targetId: `dispatch-rec-${Date.now()}`,
+      context: { 
         details: `Recommended route: ${result.recommendedRoute}`,
         recommendedRoute: result.recommendedRoute,
         explanation: result.explanation
       }
-    );
+    });
 
     return result;
   } catch (error) {
     console.error('Smart Dispatch failed:', error);
-    await logEvent(
-      "dispatch_recommendation_failed",
-      actor.uid,
-      actor.role,
-      { id: `dispatch-req-${Date.now()}`, collection: "smart-dispatch" },
-      { error: error instanceof Error ? error.message : "Unknown error" }
-    );
+    await logEvent({
+      action: "dispatch_recommendation_failed",
+      actorId: actor.uid,
+      actorRole: actor.role,
+      targetCollection: "smart-dispatch",
+      targetId: `dispatch-req-${Date.now()}`,
+      context: { error: error instanceof Error ? error.message : "Unknown error" }
+    });
     throw new Error('Failed to calculate dispatch recommendation');
   }
 }

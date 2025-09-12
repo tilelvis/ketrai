@@ -14,37 +14,40 @@ export async function runCrossCarrierVisibility(data: CrossCarrierRiskVisibility
   if (!actor || !actor.uid) throw new Error("Not authenticated");
 
   try {
-     await logEvent(
-      "risk_analysis_requested",
-      actor.uid,
-      actor.role,
-      { id: `risk-analysis-${Date.now()}`, collection: "risk-visibility" },
-      { details: `Risk analysis requested for ${data.shipments.length} shipments.` }
-    );
+     await logEvent({
+      action: "risk_analysis_requested",
+      actorId: actor.uid,
+      actorRole: actor.role,
+      targetCollection: "risk-visibility",
+      targetId: `risk-analysis-${Date.now()}`,
+      context: { details: `Risk analysis requested for ${data.shipments.length} shipments.` }
+    });
 
     const result = await crossCarrierRiskVisibility(data);
 
-    await logEvent(
-      "risk_analysis_result",
-      "system",
-      "system",
-      { id: `risk-analysis-${Date.now()}`, collection: "risk-visibility" },
-      { 
+    await logEvent({
+      action: "risk_analysis_result",
+      actorId: "system",
+      actorRole: "system",
+      targetCollection: "risk-visibility",
+      targetId: `risk-analysis-${Date.now()}`,
+      context: { 
         details: `Generated risk report with ${result.groupedRisks.length} grouped risks.`,
         summary: result.summary,
       }
-    );
+    });
 
     return result;
   } catch (error) {
     console.error("Cross-Carrier Visibility failed:", error);
-     await logEvent(
-      "risk_analysis_failed",
-      actor.uid,
-      actor.role,
-      { id: `risk-analysis-${Date.now()}`, collection: "risk-visibility" },
-      { error: error instanceof Error ? error.message : "Unknown error" }
-    );
+     await logEvent({
+      action: "risk_analysis_failed",
+      actorId: actor.uid,
+      actorRole: actor.role,
+      targetCollection: "risk-visibility",
+      targetId: `risk-analysis-${Date.now()}`,
+      context: { error: error instanceof Error ? error.message : "Unknown error" }
+    });
     throw new Error("Failed to generate visibility report");
   }
 }

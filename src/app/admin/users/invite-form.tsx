@@ -58,13 +58,14 @@ export function InviteForm() {
         }
       });
       
-      await logEvent(
-        "user_invited",
-        profile.uid,
-        profile.role,
-        { id: inviteRef.id, collection: "invites" },
-        { invitedEmail: email, assignedRole: role }
-      );
+      await logEvent({
+        action: "user_invited",
+        actorId: profile.uid,
+        actorRole: profile.role,
+        targetCollection: "invites",
+        targetId: inviteRef.id,
+        context: { invitedEmail: email, assignedRole: role }
+      });
 
       const inviteLink = `${window.location.origin}/invite/${token}`;
 

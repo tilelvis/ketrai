@@ -1,45 +1,51 @@
 'use server';
 /**
- * @fileOverview A centralized utility for creating audit log entries in Firestore.
+ * @fileOverview A centralized, robust utility for creating audit log entries.
  */
 
 import { db } from "./firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import type { Profile } from "@/store/profile";
 
-type Target = {
-    id: string;
-    collection: string;
+type LogPayload = {
+    action: string;
+    actorId: string;
+    actorRole: Profile['role'] | 'unknown' | 'system';
+    targetCollection: string;
+    targetId: string;
+    context: Record<string, any>;
 };
 
 /**
  * Logs a significant event to the auditLogs collection in Firestore.
+ * Includes detailed error logging and a fallback mechanism.
  * 
- * @param action - A string identifier for the action being performed (e.g., "claim_requested").
- * @param actorId - The UID of the user or system performing the action.
- * @param actorRole - The role of the actor.
- * @param target - An object containing the ID and collection name of the resource being affected.
- * @param context - An optional object for additional metadata.
+ * @param payload - An object containing all necessary log information.
  */
-export async function logEvent(
-    action: string, 
-    actorId: string, 
-    actorRole: Profile['role'], 
-    target: Target, 
-    context: Record<string, any> = {}
-) {
+export async function logEvent(payload: LogPayload) {
   try {
-    await addDoc(collection(db, "auditLogs"), {
-        action,
-        actorId,
-        actorRole,
-        targetCollection: target.collection,
-        targetId: target.id,
-        context,
-        timestamp: serverTimestamp()
+    const docRef = await addDoc(collection(db, "auditLogs"), {
+      ...payload,
+      timestamp: serverTimestamp(),
     });
-  } catch (error) {
-    console.error("Failed to log event:", error);
-    // In a production app, you might want to send this to a dedicated error monitoring service.
+    console.log("audit logged:", docRef.id, payload.action);
+    return docRef.id;
+  } catch (err) {
+    console.error("FAILED audit log write:", err, payload);
+
+    // Optional: fallback write to a 'failedAuditLogs' collection
+    // so ops can be retried later by an admin or scheduled job.
+    try {
+      await addDoc(collection(db, "failedAuditLogs"), {
+        ...payload,
+        error: String(err),
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.error("Failed to write fallback audit:", e);
+    }
+
+    // Do not re-throw the error to prevent the primary user action from failing
+    // just because the audit log write failed. The fallback has been recorded.
   }
 }
