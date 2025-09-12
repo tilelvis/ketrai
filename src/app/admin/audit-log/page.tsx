@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -10,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, ScrollText } from "lucide-react";
+import { RefreshCw, ScrollText, FileJson } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -39,7 +40,10 @@ function LogContextDialog({ context }: { context: Record<string, any> }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">View Details</Button>
+        <Button variant="outline" size="sm">
+            <FileJson className="mr-2 h-3 w-3" />
+            Details
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -110,7 +114,7 @@ export default function AuditLogPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Timestamp</TableHead>
+                                    <TableHead className="w-[180px]">Timestamp</TableHead>
                                     <TableHead>Action</TableHead>
                                     <TableHead>Actor</TableHead>
                                     <TableHead>Target</TableHead>
@@ -136,7 +140,7 @@ export default function AuditLogPage() {
                                         <div className="font-mono text-xs max-w-24 truncate" title={log.actorId}>{log.actorId}</div>
                                         <div className="capitalize text-xs text-muted-foreground">{log.actorRole}</div>
                                     </TableCell>
-                                    <TableCell>
+                                     <TableCell>
                                         <div className="font-mono text-xs max-w-24 truncate" title={log.targetId}>{log.targetId}</div>
                                         <div className="capitalize text-xs text-muted-foreground">{log.targetCollection}</div>
                                     </TableCell>
