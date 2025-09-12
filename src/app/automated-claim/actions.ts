@@ -4,7 +4,8 @@ import { automatedInsuranceClaimDraft } from "@/ai/flows/automated-insurance-cla
 import type { AutomatedInsuranceClaimDraftInput } from "@/ai/flows/automated-insurance-claim-draft";
 import { db, doc, collection, writeBatch, serverTimestamp } from "@/lib/firebase";
 
-// submitClaimRequest has been moved to the client-side claims service.
+// This server action is no longer the primary entry point for claim logic.
+// It is now a specific utility for the AI drafting step, called by the claims service.
 
 export async function runAutomatedClaim(input: AutomatedInsuranceClaimDraftInput, admin: { uid: string; name: string }) {
   try {

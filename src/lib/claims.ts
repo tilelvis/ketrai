@@ -11,48 +11,56 @@ import type { Profile } from "@/store/profile";
 
 type RaiseClaimInput = {
     type: string;
+    packageId: string;
     description: string;
 }
 
 /**
  * Raise a new claim (user side)
  */
-export async function raiseClaim({ type, description }: RaiseClaimInput) {
+export async function raiseClaim(claimData: RaiseClaimInput) {
   const user = auth.currentUser;
   if (!user) throw new Error("Not authenticated");
 
-  const userProfile = (await getDoc(doc(db, "users", user.uid))).data() as Profile;
-  if (!userProfile) throw new Error("User profile not found.");
+  const userProfileSnap = await getDoc(doc(db, "users", user.uid));
+  if (!userProfileSnap.exists()) throw new Error("User profile not found.");
+  const userProfile = userProfileSnap.data() as Profile;
 
   const batch = writeBatch(db);
 
   // 1. Create claim document
   const claimRef = doc(collection(db, "claims"));
   batch.set(claimRef, {
+    ...claimData,
     requesterId: user.uid,
     status: "requested",
-    type,
-    description,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
-  // 2. Log event to the audit log
-  const auditLogRef = doc(collection(db, "auditLogs"));
-  batch.set(auditLogRef, {
-    action: "claim_requested",
-    actorId: user.uid,
-    actorRole: userProfile.role,
-    targetId: claimRef.id,
-    targetCollection: "claims",
-    context: { type, description },
+  // 2. Create history entry
+  const historyRef = doc(collection(claimRef, "history"));
+    batch.set(historyRef, {
+    action: 'requested',
+    by: user.uid,
     timestamp: serverTimestamp(),
+    details: 'Claim submitted by user'
   });
-  
+
   await batch.commit();
+
+  // 3. Log event to the audit log (after batch commit to ensure claimRef.id is available)
+  await logEvent(
+    "claim_requested",
+    user.uid,
+    userProfile.role,
+    { id: claimRef.id, collection: "claims" },
+    { type: claimData.type, packageId: claimData.packageId }
+  );
 
   return claimRef.id;
 }
+
 
 /**
  * Approve a claim (admin side)
@@ -60,9 +68,10 @@ export async function raiseClaim({ type, description }: RaiseClaimInput) {
 export async function approveClaim(claimId: string) {
   const admin = auth.currentUser;
   if (!admin) throw new Error("Not authenticated");
-  const adminProfile = (await getDoc(doc(db, "users", admin.uid))).data() as Profile;
-  if (!adminProfile) throw new Error("Admin profile not found.");
-
+  
+  const adminProfileSnap = await getDoc(doc(db, "users", admin.uid));
+  if (!adminProfileSnap.exists()) throw new Error("Admin profile not found.");
+  const adminProfile = adminProfileSnap.data() as Profile;
 
   const claimRef = doc(db, "claims", claimId);
   const claimSnap = await getDoc(claimRef);
@@ -78,29 +87,35 @@ export async function approveClaim(claimId: string) {
     updatedAt: serverTimestamp(),
   });
 
-  // 2. Create a notification for the user
+  // 2. Create a history entry
+  const historyRef = doc(collection(claimRef, "history"));
+  batch.set(historyRef, {
+    action: "approved",
+    by: admin.uid,
+    timestamp: serverTimestamp(),
+    details: "Claim approved by admin."
+  });
+
+  // 3. Create a notification for the user
   const notificationRef = doc(collection(db, `users/${claimData.requesterId}/notifications`));
   batch.set(notificationRef, {
     type: "claim",
     claimId,
-    message: `Your claim for "${claimData.type}" has been approved.`,
+    message: `Your claim for package ${claimData.packageId} has been approved.`,
     read: false,
     createdAt: serverTimestamp(),
   });
 
-  // 3. Log event to the audit log
-  const auditLogRef = doc(collection(db, "auditLogs"));
-  batch.set(auditLogRef, {
-    action: "claim_approved",
-    actorId: admin.uid,
-    actorRole: adminProfile.role,
-    targetId: claimId,
-    targetCollection: "claims",
-    context: { requesterId: claimData.requesterId },
-    timestamp: serverTimestamp(),
-  });
-  
   await batch.commit();
+  
+  // 4. Log event to the audit log
+  await logEvent(
+    "claim_approved",
+    admin.uid,
+    adminProfile.role,
+    { id: claimId, collection: "claims" },
+    { requesterId: claimData.requesterId }
+  );
 }
 
 /**
@@ -109,9 +124,9 @@ export async function approveClaim(claimId: string) {
 export async function rejectClaim(claimId: string, reason: string) {
   const admin = auth.currentUser;
   if (!admin) throw new Error("Not authenticated");
-  const adminProfile = (await getDoc(doc(db, "users", admin.uid))).data() as Profile;
-  if (!adminProfile) throw new Error("Admin profile not found.");
-
+  const adminProfileSnap = await getDoc(doc(db, "users", admin.uid));
+  if (!adminProfileSnap.exists()) throw new Error("Admin profile not found.");
+  const adminProfile = adminProfileSnap.data() as Profile;
 
   const claimRef = doc(db, "claims", claimId);
   const claimSnap = await getDoc(claimRef);
@@ -128,27 +143,33 @@ export async function rejectClaim(claimId: string, reason: string) {
     updatedAt: serverTimestamp(),
   });
 
-  // 2. Create a notification for the user
+  // 2. Create a history entry
+  const historyRef = doc(collection(claimRef, "history"));
+  batch.set(historyRef, {
+    action: "rejected",
+    by: admin.uid,
+    timestamp: serverTimestamp(),
+    details: `Claim rejected. Reason: ${reason}`
+  });
+
+  // 3. Create a notification for the user
   const notificationRef = doc(collection(db, `users/${claimData.requesterId}/notifications`));
   batch.set(notificationRef, {
     type: "claim",
     claimId,
-    message: `Your claim for "${claimData.type}" was rejected. Reason: ${reason}`,
+    message: `Your claim for package ${claimData.packageId} was rejected. Reason: ${reason}`,
     read: false,
     createdAt: serverTimestamp(),
   });
 
-  // 3. Log event to the audit log
-  const auditLogRef = doc(collection(db, "auditLogs"));
-  batch.set(auditLogRef, {
-    action: "claim_rejected",
-    actorId: admin.uid,
-    actorRole: adminProfile.role,
-    targetId: claimId,
-    targetCollection: "claims",
-    context: { reason, requesterId: claimData.requesterId },
-    timestamp: serverTimestamp(),
-  });
-  
   await batch.commit();
+
+  // 4. Log event to the audit log
+  await logEvent(
+    "claim_rejected",
+    admin.uid,
+    adminProfile.role,
+    { id: claimId, collection: "claims" },
+    { reason, requesterId: claimData.requesterId }
+  );
 }

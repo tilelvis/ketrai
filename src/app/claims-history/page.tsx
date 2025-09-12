@@ -99,7 +99,7 @@ export default function ClaimsHistoryPage({ isPersonalView = false }: { isPerson
         : ['claims', 'manager', 'admin']; // Only these roles can see the full history
 
     return (
-        <RoleGate roles={allowedRoles}>
+        <RoleGate roles={allowedRoles as any}>
             <div className="space-y-6">
                 {!isPersonalView && (
                     <>

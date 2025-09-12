@@ -1,16 +1,14 @@
 import { create } from "zustand";
-import { db, auth, collection, onSnapshot, orderBy, query, where, addDoc, serverTimestamp, writeBatch, doc, deleteDoc } from "@/lib/firebase";
+import { db, auth, collection, onSnapshot, orderBy, query, writeBatch, doc, deleteDoc } from "@/lib/firebase";
 
 export type Notification = {
   id: string;
-  type: "claim" | "system" | "eta" | "dispatch" | "cross-carrier" | "risk" | "info" | "success" | "warning" | "error";
+  type: "claim" | "dispatch" | "system";
   message: string;
   read: boolean;
   createdAt: any; // Firestore timestamp
-  // Optional fields
   claimId?: string;
-  severity?: "low" | "medium" | "high";
-  category?: string;
+  dispatchId?: string;
 };
 
 type NotificationStore = {
@@ -18,6 +16,8 @@ type NotificationStore = {
   subscribe: () => () => void; // Returns an unsubscribe function
   remove: (id: string) => Promise<void>;
   clear: () => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
 };
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
@@ -36,10 +36,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: Notification[] = [];
-      snapshot.forEach(doc => {
-          list.push({ id: doc.id, ...doc.data() } as Notification);
-      });
+      const list: Notification[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       set({ notifications: list });
     }, (error) => {
       console.error("Error subscribing to notifications:", error);
@@ -75,7 +72,37 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       console.error("Error clearing notifications:", error);
     }
   },
-}));
 
-// Note: The global `notify` helper in `src/lib/notify.ts` is now only for ephemeral UI toasts.
-// All persistent notifications should be created by writing directly to the `users/{uid}/notifications` collection.
+  markAsRead: async (id: string) => {
+     const user = auth.currentUser;
+     if (!user) return;
+     try {
+       const docRef = doc(db, "users", user.uid, "notifications", id);
+       await docRef.update({ read: true });
+     } catch (error) {
+       console.error("Error marking notification as read:", error);
+     }
+  },
+
+  markAllAsRead: async () => {
+    const user = auth.currentUser;
+    const { notifications } = get();
+    if (!user) return;
+
+    const unread = notifications.filter(n => !n.read);
+    if (unread.length === 0) return;
+
+    const batch = writeBatch(db);
+    unread.forEach((n) => {
+      const docRef = doc(db, "users", user.uid, "notifications", n.id);
+      batch.update(docRef, { read: true });
+    });
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  }
+
+}));

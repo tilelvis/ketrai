@@ -36,6 +36,7 @@ type Claim = {
 function RejectClaimDialog({ claimId, onComplete }: { claimId: string; onComplete: () => void }) {
     const [reason, setReason] = useState("");
     const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
 
     async function handleReject() {
         setLoading(true);
@@ -43,7 +44,8 @@ function RejectClaimDialog({ claimId, onComplete }: { claimId: string; onComplet
         try {
             await rejectClaim(claimId, reason);
             toast.success("Claim rejected.");
-            onComplete(); // This will close the dialog via its parent
+            onComplete();
+            setOpen(false);
         } catch (err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred.";
             toast.error(`Failed to reject claim: ${message}`);
@@ -52,7 +54,7 @@ function RejectClaimDialog({ claimId, onComplete }: { claimId: string; onComplet
     }
     
     return (
-        <Dialog onOpenChange={(open) => !open && setReason("")}>
+        <Dialog open={open} onOpenChange={(open) => { setOpen(open); if (!open) setReason(""); }}>
             <DialogTrigger asChild>
                 <Button size="sm" variant="destructive">
                     <X className="mr-2 h-4 w-4" />
@@ -183,6 +185,7 @@ export default function ClaimsQueue() {
                                 </TableCell>
                                 <TableCell className="text-right space-x-2">
                                     <Button size="sm" variant="secondary" onClick={() => handleApprove(c.id)} disabled={actionLoading[c.id]}>
+                                        {actionLoading[c.id] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         <Check className="mr-2 h-4 w-4" />
                                         Approve
                                     </Button>

@@ -13,9 +13,11 @@ import { Loader2, FilePenLine } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useProfileStore } from "@/store/profile";
+import { Input } from "../ui/input";
 
 const formSchema = z.object({
   type: z.string({ required_error: "Please select a claim type." }),
+  packageId: z.string().min(1, "Package ID is required."),
   description: z.string().min(10, "Description must be at least 10 characters."),
 });
 
@@ -27,7 +29,8 @@ export function AutomatedClaimForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: "Item Damaged",
-      description: "Package containing fragile glassware arrived with contents shattered. Tracking number: TKN12345.",
+      packageId: "PKG-789-XYZ",
+      description: "Package containing fragile glassware arrived with contents shattered.",
     },
   });
 
@@ -88,6 +91,19 @@ export function AutomatedClaimForm() {
                   </FormItem>
                 )}
               />
+               <FormField
+                  control={form.control}
+                  name="packageId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Package ID / Tracking Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter the package identifier..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField
                 control={form.control}
                 name="description"
@@ -95,7 +111,7 @@ export function AutomatedClaimForm() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Describe the issue, including tracking numbers or order IDs..." {...field} rows={5} />
+                      <Textarea placeholder="Describe the issue..." {...field} rows={5} />
                     </FormControl>
                      <FormDescription>Please be as detailed as possible.</FormDescription>
                     <FormMessage />
