@@ -12,7 +12,7 @@ export const aiFlows = [
     file: "",
     icon: Home,
     description: "Real-time fleet monitoring and AI-powered insights.",
-    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin', 'user', 'courier'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
   {
     name: "Proactive ETA",
@@ -36,15 +36,15 @@ export const aiFlows = [
     file: "automated-insurance-claim-draft",
     icon: FilePenLine,
     description: "Submit or process insurance claims for packages.",
-    roles: ['dispatcher', 'support', 'claims', 'admin', 'user', 'courier'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
-  { 
+    { 
     name: "Claims History", 
     slug: "/claims-history", 
     file: "",
     icon: ClipboardList,
     description: "View and manage past insurance claims.",
-    roles: ['claims', 'manager', 'admin', 'user', 'dispatcher', 'support', 'courier'],
+    roles: ['claims', 'manager', 'admin'],
   },
   { 
     name: "Risk Visibility", 
@@ -76,7 +76,7 @@ export const aiFlows = [
     file: "",
     icon: User,
     description: "User profile settings.",
-    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin', 'user', 'courier'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
   {
     name: "Settings",
@@ -84,7 +84,7 @@ export const aiFlows = [
     file: "",
     icon: Settings,
     description: "Application settings.",
-    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin', 'user', 'courier'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
 ];
 

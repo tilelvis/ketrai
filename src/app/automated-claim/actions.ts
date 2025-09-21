@@ -2,35 +2,42 @@
 
 import { automatedInsuranceClaimDraft } from "@/ai/flows/automated-insurance-claim-draft";
 import type { AutomatedInsuranceClaimDraftInput } from "@/ai/flows/automated-insurance-claim-draft";
-import { db, doc, serverTimestamp, writeBatch } from "@/lib/firebase";
-import { logEvent } from "@/lib/audit-log";
-import type { Profile } from "@/store/profile";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { z } from "zod";
 
+const ClaimRequestSchema = z.object({
+  packageTrackingHistory: z.string(),
+  productDetails: z.string(),
+  claimReason: z.string(),
+  damagePhotoDataUri: z.string().optional(),
+});
 
-export async function runAutomatedClaim(input: AutomatedInsuranceClaimDraftInput, actor: { uid: string; role: Profile['role'] }) {
+type ClaimRequestInput = z.infer<typeof ClaimRequestSchema>;
+
+export async function submitClaimRequest(data: ClaimRequestInput) {
   try {
-    const result = await automatedInsuranceClaimDraft(input);
-
-    const batch = writeBatch(db);
-    const claimRef = doc(db, "claims", input.claimId);
-    
-    batch.update(claimRef, {
-        status: "inReview", 
-        updatedAt: serverTimestamp(),
-        adminId: actor.uid,
+    // This now runs on the server with admin privileges,
+    // but we should still enforce logic that a user must be authenticated.
+    // The security rules will handle the role-based read/update logic.
+    await addDoc(collection(db, "claims"), {
+      ...data,
+      status: "pending_review",
+      createdAt: serverTimestamp(),
     });
-    
-    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to submit claim request:", error);
+    const message = error instanceof Error ? error.message : "An unknown error occurred.";
+    // Ensure we return a structured error that the client can handle
+    return { success: false, error: `Failed to submit claim request: ${message}` };
+  }
+}
 
-    await logEvent({
-        action: "claim_drafted_by_ai",
-        actorId: actor.uid,
-        actorRole: actor.role,
-        targetCollection: "claims",
-        targetId: input.claimId,
-        context: { details: `AI draft generated for claim.` }
-    });
 
+export async function runAutomatedClaim(data: AutomatedInsuranceClaimDraftInput) {
+  try {
+    const result = await automatedInsuranceClaimDraft(data);
     return { success: true, result };
   } catch (error) {
     console.error("Automated Claim failed:", error);

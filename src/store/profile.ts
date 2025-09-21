@@ -5,7 +5,7 @@ export type Profile = {
   uid: string;
   email: string | null;
   name: string;
-  role: "dispatcher" | "manager" | "claims" | "admin" | "support" | "user" | "courier";
+  role: "dispatcher" | "manager" | "claims" | "admin" | "support";
   status: "active" | "inactive";
   photoURL?: string;
   profile?: { 

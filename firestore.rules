@@ -86,14 +86,5 @@ service cloud.firestore {
       // No edits/deletes allowed
       allow update, delete: if false;
     }
-
-    // -------------------------
-    // CLAIMS QUEUE (Optional: lightweight view for dashboards)
-    // -------------------------
-    match /claimsQueue/{queueId} {
-      allow list, get: if hasRole(['admin', 'claims', 'manager']);
-      allow create, update: if hasRole(['admin', 'claims']);
-      allow delete: if false;
-    }
   }
 }
