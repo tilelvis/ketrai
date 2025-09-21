@@ -53,6 +53,9 @@ export const setRole = onCall(async (request) => {
 
   } catch (error) {
     logger.error(`Error setting role for user ${uid}:`, error);
-    throw new HttpsError("internal", "An internal error occurred while setting the role.");
+    const message = error instanceof Error ? error.message : "An internal error occurred while setting the role.";
+    throw new HttpsError("internal", message);
   }
 });
+
+    

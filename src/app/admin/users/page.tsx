@@ -182,9 +182,11 @@ export default function UsersPage() {
             const setRole = httpsCallable(functions, 'setRole');
             const response = await setRole({ uid, role: newRole });
 
-            if (response.data.success) {
+            if ((response.data as any)?.success) {
                 setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, role: newRole } : u)));
-                toast.success("Role updated successfully! User must sign out and back in for changes to apply.");
+                toast.success("Role updated successfully!", {
+                    description: "The user must sign out and back in for the change to take effect."
+                });
 
                 await logEvent({
                     action: "user_role_updated",
@@ -195,7 +197,7 @@ export default function UsersPage() {
                     context: { details: `User role changed from '${originalRole}' to '${newRole}'.`, previousRole: originalRole, newRole: newRole }
                 });
             } else {
-                 throw new Error((response.data as any).error);
+                 throw new Error((response.data as any).message || "Unknown function error");
             }
 
         } catch (err) {
@@ -335,3 +337,5 @@ export default function UsersPage() {
         </RoleGate>
     );
 }
+
+    
