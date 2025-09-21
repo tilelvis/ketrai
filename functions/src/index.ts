@@ -57,5 +57,3 @@ export const setRole = onCall(async (request) => {
     throw new HttpsError("internal", message);
   }
 });
-
-    
