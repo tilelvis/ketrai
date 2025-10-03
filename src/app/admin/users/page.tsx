@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -19,6 +20,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { InviteForm } from "./invite-form";
 import { logEvent } from "@/lib/audit-log";
 import { useProfileStore } from "@/store/profile";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 
 type Invite = {
     id: string;
@@ -210,29 +213,35 @@ export default function UsersPage() {
         }
     }
 
-    async function toggleStatus(uid: string, status: Profile["status"]) {
+    function toggleStatus(uid: string, status: Profile["status"]) {
         const admin = auth.currentUser;
         if (!admin || !adminProfile) return;
 
         const newStatus = status === "active" ? "inactive" : "active";
-        try {
-            await updateDoc(doc(db, "users", uid), { status: newStatus });
-            setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, status: newStatus } : u)));
-            toast.success(`User ${newStatus === "active" ? "activated" : "deactivated"}`);
+        const userDocRef = doc(db, "users", uid);
+        const updatedData = { status: newStatus };
 
-            await logEvent({
-                action: newStatus === 'active' ? "user_activated" : "user_deactivated",
-                actorId: admin.uid,
-                actorRole: adminProfile.role,
-                targetCollection: "users",
-                targetId: uid,
-                context: { details: `User account status set to '${newStatus}'.` }
+        updateDoc(userDocRef, updatedData)
+            .then(async () => {
+                setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, status: newStatus } : u)));
+                toast.success(`User ${newStatus === "active" ? "activated" : "deactivated"}`);
+
+                await logEvent({
+                    action: newStatus === 'active' ? "user_activated" : "user_deactivated",
+                    actorId: admin.uid,
+                    actorRole: adminProfile.role,
+                    targetCollection: "users",
+                    targetId: uid,
+                    context: { details: `User account status set to '${newStatus}'.` }
+                });
+            })
+            .catch((serverError) => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'update',
+                    requestResourceData: updatedData,
+                } satisfies SecurityRuleContext));
             });
-
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "An unknown error occurred";
-            toast.error(`Failed to update status: ${message}`);
-        }
     }
 
     return (
