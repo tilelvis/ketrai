@@ -229,7 +229,7 @@ export default function UsersPage() {
                 context: { details: `User account status set to '${newStatus}'.` }
             });
 
-        } catch (err) => {
+        } catch (err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred";
             toast.error(`Failed to update status: ${message}`);
         }
