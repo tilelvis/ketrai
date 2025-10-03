@@ -44,7 +44,7 @@ export const aiFlows = [
     file: "",
     icon: ClipboardList,
     description: "View and manage past insurance claims.",
-    roles: ['claims', 'manager', 'admin'],
+    roles: ['dispatcher', 'claims', 'support', 'manager', 'admin'],
   },
   { 
     name: "Risk Visibility", 

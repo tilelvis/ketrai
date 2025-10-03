@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, getDocs, doc, updateDoc, query, orderBy, Timestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { doc, updateDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { Profile } from "@/store/profile";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,8 @@ import { logEvent } from "@/lib/audit-log";
 import { useProfileStore } from "@/store/profile";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
+import { collection, query, orderBy, getDocs, Timestamp } from "firebase/firestore";
+
 
 type Invite = {
     id: string;
@@ -240,7 +241,7 @@ export default function UsersPage() {
                     path: userDocRef.path,
                     operation: 'update',
                     requestResourceData: updatedData,
-                } satisfies SecurityRuleContext));
+                }));
             });
     }
 

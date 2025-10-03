@@ -2,78 +2,38 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
+
+    // Helper function to check if a user has one of the specified roles.
+    function hasRole(allowedRoles) {
+      return request.auth.token.role in allowedRoles;
     }
-    
+
+    // Helper function to check if the user is the owner of the document.
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
-    function hasRole(allowedRoles) {
-      return isSignedIn() && request.auth.token.role in allowedRoles;
-    }
 
-    // =========== USERS ============
-    // Users can read anyone's profile (for avatars, names).
-    // Users can only create their own profile.
-    // Users can only update their own profile, but Admins can update any.
-    // Only Admins can list or delete users.
+    // Default-deny all access.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // For now, allow any authenticated user to read/write.
+    // This is for development and will be locked down later.
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if request.auth.uid == userId && request.resource.data.role == 'dispatcher';
-      allow update: if isOwner(userId) || hasRole(['admin']);
-      allow delete: if hasRole(['admin']);
-      allow list: if hasRole(['admin']);
-    }
-
-    // =========== INVITES ============
-    // Only Admins can create or manage invites.
-    // Anyone with a valid token link can read a specific invite to accept it.
-    match /invites/{inviteId} {
-      allow read;
-      allow list, create, update, delete: if hasRole(['admin']);
+      allow read, write: if request.auth != null;
     }
     
-    // =========== CLAIMS ============
-    // Admins, managers, and claims officers can see all claims.
-    // Dispatchers/Support can only see claims they created.
-    // Any authenticated user can create a claim.
-    // Only admins/claims officers can update a claim (approve/reject).
     match /claims/{claimId} {
-      allow list, get: if hasRole(['admin', 'manager', 'claims']);
-      allow get: if isSignedIn() && resource.data.requesterId == request.auth.uid;
-      allow create: if isSignedIn();
-      allow update: if hasRole(['admin', 'claims']);
-      allow delete: if hasRole(['admin']);
-
-      match /history/{historyId} {
-        allow read, list: if hasRole(['admin', 'manager', 'claims']) || (isSignedIn() && get(/databases/$(database)/documents/claims/$(claimId)).data.requesterId == request.auth.uid);
-        allow create: if hasRole(['admin', 'claims']) || (isSignedIn() && isOwner(request.resource.data.requesterId));
-      }
+      allow read, write: if request.auth != null;
     }
 
-    // =========== NOTIFICATIONS ============
-    // Users can only access their own notifications.
-    match /users/{userId}/notifications/{notificationId} {
-        allow read, list, create, update, delete: if isOwner(userId);
+    match /invites/{inviteId} {
+      allow read, write: if request.auth != null;
     }
     
-    // =========== AUDIT LOGS ============
-    // Immutable collection. Only admins can read. Only backend can write.
     match /auditLogs/{logId} {
-      allow read: if hasRole(['admin']);
-      allow write: if false; // Only backend services can write
-    }
-
-    // =========== AI-RELATED DATA (Fallback/General) ============
-    // For AI-generated data like ETA results, dispatch recommendations, etc.
-    // Generally, only the user who initiated the request should see the result.
-    // This is a generic rule; more specific collections can override it.
-    match /{collection}/{docId} {
-      allow read, write: if isSignedIn() && resource.data.requesterId == request.auth.uid;
+       allow read, write: if request.auth != null;
     }
   }
 }
