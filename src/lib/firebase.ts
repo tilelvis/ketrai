@@ -1,6 +1,8 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, serverTimestamp, writeBatch, deleteDoc, query, orderBy, onSnapshot, where, Timestamp, addDoc } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -36,15 +38,22 @@ export async function fetchUserProfile(user: User) {
       uid: user.uid,
       email: user.email,
       name: user.displayName ?? user.email?.split('@')[0] ?? "New User",
-      role: "user", // Default role for new signups
+      role: "dispatcher", // Default role for new signups
       status: "active",
       photoURL: user.photoURL ?? "",
       preferences: defaultPreferences
     };
-    await setDoc(ref, newProfile);
     
-    // NOTE: In a real app, you would likely trigger a Cloud Function here
-    // to set the initial custom claim for the new user's role.
+    // Use non-blocking write with contextual error handling
+    setDoc(ref, newProfile)
+      .catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: ref.path,
+          operation: 'create',
+          requestResourceData: newProfile,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      });
     
     return newProfile;
   }
@@ -53,8 +62,17 @@ export async function fetchUserProfile(user: User) {
   // Ensure preferences object exists for older users
   if (!profileData.preferences) {
     profileData.preferences = defaultPreferences;
-    // Optionally, update the document in Firestore
-    await updateDoc(ref, { preferences: profileData.preferences });
+    
+    // Non-blocking update with contextual error handling
+    updateDoc(ref, { preferences: profileData.preferences })
+      .catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: ref.path,
+          operation: 'update',
+          requestResourceData: { preferences: profileData.preferences },
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      });
   }
 
   return profileData;
