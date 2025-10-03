@@ -14,6 +14,7 @@ import { onAuthStateChanged, auth, fetchUserProfile } from "@/lib/firebase";
 import { useProfileStore } from "@/store/profile";
 import { ProfileMenu } from "./profile-menu";
 import { useTheme } from "next-themes";
+import { FirebaseErrorListener } from "./FirebaseErrorListener";
 
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -111,6 +112,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background/50">
+      <FirebaseErrorListener />
       <aside className="w-64 flex-col fixed inset-y-0 z-10 hidden border-r bg-card p-6 md:flex">
         <div className="flex items-center gap-2 mb-8">
           <Logo className="size-8 text-primary" />
