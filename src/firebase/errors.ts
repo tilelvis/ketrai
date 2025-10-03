@@ -3,7 +3,7 @@
  * for providing richer context for Firestore Security Rule violations.
  */
 
-import { auth } from "./firebase";
+import { auth } from "@/lib/firebase";
 
 /**
  * Represents the context of a Firestore operation that was denied by security rules.
