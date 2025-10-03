@@ -30,10 +30,36 @@ export const getUsers = onCall(async (request) => {
   }
 
   try {
+    const auth = getAuth();
     const firestore = getFirestore();
-    const usersSnapshot = await firestore.collection("users").get();
-    const users = usersSnapshot.docs.map(doc => doc.data());
-    return { users };
+    
+    // Get all users from Firebase Authentication
+    const userRecords = await auth.listUsers();
+
+    // Fetch corresponding profile from Firestore for each user
+    const userProfiles = await Promise.all(
+        userRecords.users.map(async (user) => {
+            const userDoc = await firestore.collection("users").doc(user.uid).get();
+            if (userDoc.exists) {
+                return userDoc.data();
+            } else {
+                // This case handles users that exist in Auth but not in Firestore.
+                // It creates a default profile structure for them.
+                return {
+                    uid: user.uid,
+                    email: user.email,
+                    name: user.displayName || user.email?.split('@')[0],
+                    role: 'dispatcher', // Default role
+                    status: 'inactive', // Mark as inactive until reviewed
+                    photoURL: user.photoURL || '',
+                    // You might want to add preferences here if needed
+                }
+            }
+        })
+    );
+
+    return { users: userProfiles };
+
   } catch (error) {
      logger.error("Error fetching all users:", error);
      const message = error instanceof Error ? error.message : "An internal error occurred while fetching users.";
