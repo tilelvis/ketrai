@@ -16,6 +16,32 @@ import { getFirestore } from "firebase-admin/firestore";
 // Initialize Firebase Admin SDK
 initializeApp();
 
+// Callable function to get all users
+export const getUsers = onCall(async (request) => {
+  // 1. Verify the caller is an admin.
+  if (request.auth?.token.role !== "admin") {
+    logger.error("Request to get users without admin privileges.", {
+      uid: request.auth?.uid,
+    });
+    throw new HttpsError(
+      "permission-denied",
+      "You must be an admin to list users."
+    );
+  }
+
+  try {
+    const firestore = getFirestore();
+    const usersSnapshot = await firestore.collection("users").get();
+    const users = usersSnapshot.docs.map(doc => doc.data());
+    return { users };
+  } catch (error) {
+     logger.error("Error fetching all users:", error);
+     const message = error instanceof Error ? error.message : "An internal error occurred while fetching users.";
+     throw new HttpsError("internal", message);
+  }
+});
+
+
 // Callable function to set a user's role
 export const setRole = onCall(async (request) => {
   // 1. Verify the caller is an admin.

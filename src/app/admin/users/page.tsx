@@ -152,8 +152,10 @@ export default function UsersPage() {
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
-            const snap = await getDocs(collection(db, "users"));
-            const data: Profile[] = snap.docs.map((d) => d.data() as Profile);
+            const functions = getFunctions();
+            const getUsersFn = httpsCallable(functions, 'getUsers');
+            const result = await getUsersFn();
+            const data = (result.data as { users: Profile[] }).users;
             setUsers(data);
         } catch (err) {
             const message = err instanceof Error ? err.message : "An unknown error occurred";
@@ -227,7 +229,7 @@ export default function UsersPage() {
                 context: { details: `User account status set to '${newStatus}'.` }
             });
 
-        } catch (err) {
+        } catch (err) => {
             const message = err instanceof Error ? err.message : "An unknown error occurred";
             toast.error(`Failed to update status: ${message}`);
         }
@@ -337,5 +339,3 @@ export default function UsersPage() {
         </RoleGate>
     );
 }
-
-    
